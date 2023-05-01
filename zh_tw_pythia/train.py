@@ -45,7 +45,7 @@ def main(
     per_device_train_batch_size: int = 1,
     # Logging & Saving
     logging_steps: int = 10,
-    save_steps: int = 5000,
+    save_steps: int = 1000,
     save_total_limit: int = 10,
     # Other
     train_data_limit: Union[int, None] = None,
