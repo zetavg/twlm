@@ -181,7 +181,7 @@ def train(
         f"New input_embeddings: {model.get_input_embeddings()}, output_embeddings: {model.get_output_embeddings()}.")
 
     if train_params and len(train_params) > 0:
-        print(f"Will only train these params: {', '.join(train_params)}.")
+        print(f"Will only train params matching: {', '.join(train_params)}.")
         trainable_params_list = []
         frozen_params_list = []
         for name, param in model.named_parameters():
