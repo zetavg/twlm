@@ -283,7 +283,8 @@ def train(
         push_to_hub=True if push_to_hf_hub_model_name else False,
         hub_model_id=push_to_hf_hub_model_name,
         hub_private_repo=hf_hub_private_repo,
-        hub_strategy="all_checkpoints",
+        # hub_strategy="all_checkpoints",  # Problematic
+        hub_strategy="end",
         # WandB
         report_to=['wandb'] if use_wandb else None,
         # Other
@@ -294,6 +295,7 @@ def train(
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.Trainer
     trainer = TrainerWithOutputLogging(
         model=model,
+        tokenizer=tokenizer,
         train_dataset=train_data,  # type: ignore
         data_collator=data_collator,
         args=training_args
