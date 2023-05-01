@@ -1,0 +1,37 @@
+resources:
+  accelerators: A100:1
+  use_spot: true
+
+file_mounts:
+  # Mount a presisted cloud storage.
+  # See https://skypilot.readthedocs.io/en/latest/reference/storage.html for details.
+  /llm_training_data:
+    # Make sure this name is unique or you own this bucket. If it does not exists, SkyPilot will try to create a bucket with this name.
+    name: llm-training-08
+    store: s3  # Could be either of [s3, gcs]
+    mode: MOUNT
+
+workdir: ./sky_workdir
+
+setup: |
+  sudo apt-get install git-lfs
+  git lfs install --skip-repo
+  git config --global credential.helper store
+  conda create -q python=3.8 -n zh-tw-pythia -y
+  conda activate zh-tw-pythia
+  pip install -r requirements.txt
+
+run: |
+  conda activate zh-tw-pythia
+  python train.py \
+    --tokenizer='zetavg/test-pythia-zh-tw-tokenizer-20230430-1' \
+    --base_model='EleutherAI/pythia-70m' \
+    --dataset='zetavg/wikipedia_random_page_summaries_zh_tw_5k' \
+    --dataset_column='page_summary' \
+    --dataset_split='train' \
+    --per_device_train_batch_size=3 \
+    --train_params='embed'  \
+    --output_dir='/llm_training_data/zh_tw_pythia/test-skypilot-02' \
+    --run_name='test-skypilot-02' \
+    --wandb_project='test-project' \
+    --push_to_hf --hf_hub_private_repo

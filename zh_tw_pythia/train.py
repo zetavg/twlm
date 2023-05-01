@@ -46,6 +46,7 @@ def main(
     # Logging & Saving
     logging_steps: int = 10,
     save_steps: int = 5000,
+    save_total_limit: int = 10,
     # Other
     train_data_limit: Union[int, None] = None,
     **kwargs
@@ -81,6 +82,11 @@ def main(
     print(f"Base model: {base_model}.")
     print(f"Tokenizer: {tokenizer}.")
     print(f"Output dir: {output_dir}.")
+    run_tags = [
+        f"base_model:{base_model}",
+        f"tokenizer:{tokenizer}",
+        f"dataset:{dataset}",
+    ]
 
     resume_from_checkpoint = find_checkpoint_to_resume(output_dir)
 
@@ -107,14 +113,17 @@ def main(
         use_wandb = True
 
     if use_wandb:
+        wandb_tags_list = run_tags
+        if wandb_tags:
+            wandb_tags_list += [
+                tag.strip() for tag in wandb_tags.split(",")]
         wandb.init(
             project=wandb_project,
             name=run_name,
             resume="allow",
             id=f"{wandb_project}--{run_name}",  # Unique ID for resuming
             group=wandb_group,
-            tags=[tag.strip()
-                  for tag in wandb_tags.split(",")] if wandb_tags else None,
+            tags=wandb_tags_list,
             save_code=True,
             magic=True,
         )
@@ -131,6 +140,7 @@ def main(
         per_device_train_batch_size=per_device_train_batch_size,
         logging_steps=logging_steps,
         save_steps=save_steps,
+        save_total_limit=save_total_limit,
         output_dir_path=output_dir,
         resume_from_checkpoint=resume_from_checkpoint,
         push_to_hf_hub_model_name=push_to_hf_hub_model_name,
@@ -151,8 +161,9 @@ def train(
     per_device_train_batch_size: int,
     logging_steps: int,
     save_steps: int,
+    save_total_limit: int,
     output_dir_path: str,
-    resume_from_checkpoint: bool,
+    resume_from_checkpoint: Union[str, bool],
     push_to_hf_hub_model_name: Union[str, None],
     hf_hub_private_repo: bool,
     use_wandb: bool,
@@ -267,6 +278,7 @@ def train(
         logging_steps=logging_steps,
         save_strategy="steps",
         save_steps=save_steps,
+        save_total_limit=save_total_limit,
         # HF
         push_to_hub=True if push_to_hf_hub_model_name else False,
         hub_model_id=push_to_hf_hub_model_name,
