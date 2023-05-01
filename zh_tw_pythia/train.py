@@ -11,11 +11,13 @@ from datasets import Dataset, load_dataset
 import huggingface_hub
 import wandb
 
+import os
+import re
+from datetime import datetime, timezone
 import traceback
 import time
-from datetime import datetime, timezone
 
-from typing import Union
+from typing import Union, List, Dict, Any
 
 started_time = datetime.now(timezone.utc)
 started_time_str = started_time.strftime('%Y-%m-%d-%H-%M-%S')
@@ -27,48 +29,60 @@ def main(
     dataset: str,
     dataset_column: str,
     dataset_split: str = "train",
-    train_data_limit: Union[int, None] = None,
+    train_params: Union[str, None] = None,
     # Output
     output_dir: str = f"./output-{started_time_str}",
+    run_name: Union[str, None] = None,
     # Hugging Face Hub
     push_to_hf: bool = False,
     push_to_hf_hub_model_name: Union[str, None] = None,
     hf_hub_private_repo: bool = False,
     # WandB
     wandb_project: Union[str, None] = None,
-    wandb_run_name: Union[str, None] = None,
     wandb_group: Union[str, None] = None,
     wandb_tags: Union[str, None] = None,
     # Training
     per_device_train_batch_size: int = 1,
     # Logging & Saving
     logging_steps: int = 10,
-    save_steps: int = 10000,
+    save_steps: int = 5000,
+    # Other
+    train_data_limit: Union[int, None] = None,
+    **kwargs
 ):
     '''
     :param base_model: The tokenizer to use. Can be a path to a tokenizer or a model name on Hugging Face Hub, such as 'EleutherAI/pythia-1b', 'EleutherAI/pythia-410m', 'EleutherAI/pythia-160m' or 'EleutherAI/pythia-70m'.
     :param tokenizer: The tokenizer to use. Can be a path to a tokenizer or a model name on Hugging Face Hub, such as 'zetavg/test-pythia-zh-tw-tokenizer-20230430-1'.
     :param dataset: Dataset used for training. Can be a path to a dataset or a dataset name on Hugging Face Hub, such as 'zetavg/wikipedia_random_page_summaries_zh_tw_5k'.
     :param dataset_column: The column of the dataset to use for training, such as 'page_summary'.
+    :param dataset_split: The split of the dataset to use for training, such as 'train'.
+
+    :param train_params: If set, will only train the matching parameters of the model. Example: 'embed_in,embed_out,layers.[0-9]+.attention'.
 
     :param output_dir: A directory to save the checkpoints and the trained model.
+    :param run_name: The name of the run. If not set, a random name will be generated. This will be used as the run name of WandB (if enabled) and the default name of the model to push to Hugging Face Hub (if enabled).
 
     :param push_to_hf: If enabled, the model will be pushed to Hugging Face Hub on each checkpoint save and after the training. To use this, you need to login to Hugging Face using `huggingface-cli login`; or set the HUGGING_FACE_HUB_TOKEN environment variable to your Hugging Face API token, which you can get from https://huggingface.co/settings/token. The model will be public by default, to push to a private model, use the `--hf_hub_private_repo` flag.
     :param push_to_hf_hub_model_name: If not set, a name based on the current date and time will be generated.
     :param hf_hub_private_repo: If set, the Hugging Face Hub repo will be set to private.
 
     :param wandb_project: The name of the project where you're sending the logs of the run. WandB will be enabled if this is set. You will need to login to WandB using `wandb login` or set the WANDB_API_KEY environment variable to your WandB API key, which can be found at https://wandb.ai/authorize.
-    :param wandb_run_name: The name of the run. If not set, a random name will be generated.
     :param wandb_group: (optional) Specify a group to organize individual runs into a larger experiment.
     :param wandb_tags: (optional) A list tags splitted by ","", which will populate the list of tags on the run in the UI. Example: --wandb_tags='pythia-70m,wikitext'.
+
+    :param train_data_limit: If set, will limit the number of training examples to the specified number.
     '''
     default_run_name = f"zh_tw_pythia-{started_time_str}"
+    if not run_name:
+        run_name = default_run_name
     if push_to_hf and not push_to_hf_hub_model_name:
         push_to_hf_hub_model_name = default_run_name
 
     print(f"Base model: {base_model}.")
     print(f"Tokenizer: {tokenizer}.")
     print(f"Output dir: {output_dir}.")
+
+    resume_from_checkpoint = find_checkpoint_to_resume(output_dir)
 
     if push_to_hf_hub_model_name is not None:
         assert_is_non_blank_string(
@@ -93,13 +107,11 @@ def main(
         use_wandb = True
 
     if use_wandb:
-        if not wandb_run_name:
-            wandb_run_name = default_run_name
         wandb.init(
             project=wandb_project,
-            name=wandb_run_name,
+            name=run_name,
             resume="allow",
-            id=f"{wandb_project}--{wandb_run_name}",  # Unique ID for resuming
+            id=f"{wandb_project}--{run_name}",  # Unique ID for resuming
             group=wandb_group,
             tags=[tag.strip()
                   for tag in wandb_tags.split(",")] if wandb_tags else None,
@@ -114,13 +126,17 @@ def main(
         dataset_column=dataset_column,
         dataset_split=dataset_split,
         train_data_limit=train_data_limit,
+        train_params=[param_name.strip()
+                      for param_name in train_params.split(",")] if train_params else None,
         per_device_train_batch_size=per_device_train_batch_size,
         logging_steps=logging_steps,
         save_steps=save_steps,
         output_dir_path=output_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
         push_to_hf_hub_model_name=push_to_hf_hub_model_name,
         hf_hub_private_repo=hf_hub_private_repo,
         use_wandb=use_wandb,
+        other_args=kwargs,
     )
 
 
@@ -131,13 +147,16 @@ def train(
     dataset_column: str,
     dataset_split: str,
     train_data_limit: Union[int, None],
+    train_params: Union[List[str], None],
     per_device_train_batch_size: int,
     logging_steps: int,
     save_steps: int,
     output_dir_path: str,
+    resume_from_checkpoint: bool,
     push_to_hf_hub_model_name: Union[str, None],
     hf_hub_private_repo: bool,
     use_wandb: bool,
+    other_args: Dict[str, Any],
 ):
 
     print(f"Loading tokenizer '{tokenizer_name}'...")
@@ -160,12 +179,54 @@ def train(
     model.resize_token_embeddings(tokenizer.vocab_size)
     print(
         f"New input_embeddings: {model.get_input_embeddings()}, output_embeddings: {model.get_output_embeddings()}.")
+
+    if train_params and len(train_params) > 0:
+        print(f"Will only train these params: {', '.join(train_params)}.")
+        trainable_params_list = []
+        frozen_params_list = []
+        for name, param in model.named_parameters():
+            if not any(re.search(pattern, name) for pattern in train_params):
+                frozen_params_list.append(name)
+                param.requires_grad = False
+            else:
+                trainable_params_list.append(name)
+        print()
+        print("trainable_params:", trainable_params_list)
+        print()
+        print("frozen_params:", frozen_params_list)
+        print()
+        if use_wandb:
+            wandb.config.update({
+                'train_params': train_params,
+                'trainable_params': trainable_params_list,
+                'frozen_params': frozen_params_list,
+            })
+
+    trainable_params_count = 0
+    all_params_count = 0
+    for _, param in model.named_parameters():
+        all_params_count += param.numel()
+        if param.requires_grad:
+            trainable_params_count += param.numel()
+    trainable_params_rate = trainable_params_count / all_params_count
+    print(
+        f"trainable params: {trainable_params_count} || all params: {all_params_count} || trainable%: {100 * trainable_params_rate}"
+    )
+    if use_wandb:
+        wandb.config.update({
+            'train_params': train_params,
+            'trainable_params_count': trainable_params_count,
+            'all_params_count': all_params_count,
+            'trainable_params_rate': trainable_params_rate,
+        })
+
     print(f"Base model ready.")
 
     print(f"Loading dataset '{dataset_name}'...")
     ds: Dataset = load_dataset(dataset_name)[dataset_split]  # type: ignore
     if train_data_limit:
-        ds = ds.filter(lambda _, idx: idx < train_data_limit, with_indices=True)
+        ds = ds.filter(lambda _, idx: idx <
+                       train_data_limit, with_indices=True)
 
     def tokenize_data(data_point):
         batch_encoding = tokenizer(
@@ -199,7 +260,7 @@ def train(
         per_device_train_batch_size=per_device_train_batch_size,
         gradient_accumulation_steps=1,
         optim="adamw_torch",
-        learning_rate=3e-5,
+        learning_rate=5e-5,
         lr_scheduler_type="constant",
         warmup_steps=100,
         # Steps
@@ -210,9 +271,12 @@ def train(
         push_to_hub=True if push_to_hf_hub_model_name else False,
         hub_model_id=push_to_hf_hub_model_name,
         hub_private_repo=hf_hub_private_repo,
-        hub_strategy="checkpoint",
+        hub_strategy="all_checkpoints",
         # WandB
         report_to=['wandb'] if use_wandb else None,
+        # Other
+        # fp16=True
+        **other_args
     )
 
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.Trainer
@@ -223,9 +287,15 @@ def train(
         args=training_args
     )
     trainer._output_logging_tokenizer = tokenizer  # type: ignore
-    trainer.log_output_every_n_steps = logging_steps * 20  # type: ignore
+    trainer.log_output_every_n_steps = logging_steps * 50  # type: ignore
 
-    trainer.train()
+    if resume_from_checkpoint:
+        if isinstance(resume_from_checkpoint, str):
+            print(f"Resuming from checkpoint '{resume_from_checkpoint}'...")
+        else:
+            print(f"Resuming from latest checkpoint...")
+
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
     model.save_pretrained(output_dir_path)
     print(f"Model saved to {output_dir_path}.")
@@ -249,10 +319,10 @@ class TrainerWithOutputLogging(Trainer):
     def training_step(self, model, inputs):
         tensor = super().training_step(model, inputs)
 
-        if hasattr(self, "_output_logging_current_step"):
-            self._output_logging_current_step += 1
+        if hasattr(self, "_current_step_for_output_logging"):
+            self._current_step_for_output_logging += 1
         else:
-            self._output_logging_current_step = 0
+            self._current_step_for_output_logging = 0
 
         return tensor
 
@@ -261,8 +331,8 @@ class TrainerWithOutputLogging(Trainer):
         should_compute_loss_return_outputs = return_outputs
         should_log_output = False
 
-        if hasattr(self, "_output_logging_current_step"):
-            if self._output_logging_current_step % self.log_output_every_n_steps == 0:  # type: ignore
+        if hasattr(self, "_current_step_for_output_logging"):
+            if self._current_step_for_output_logging % self.log_output_every_n_steps == 0:  # type: ignore
                 # force the original `training_step` to return outputs
                 # so we can inspect it
                 should_compute_loss_return_outputs = True
@@ -309,6 +379,48 @@ class TrainerWithOutputLogging(Trainer):
             return (loss, outputs) if return_outputs else loss
         else:
             return compute_loss_result
+
+
+def find_checkpoint_to_resume(output_dir):
+    if not os.path.isdir(output_dir):
+        return False
+
+    checkpoints = [
+        os.path.join(output_dir, d)
+        for d in os.listdir(output_dir) if d.startswith("checkpoint")
+    ]
+    if len(checkpoints) <= 0:
+        return False
+
+    print(
+        f"Found {len(checkpoints)} checkpoints in {output_dir}.")
+
+    # Filter checkpoints containing 'trainer_state.json', to prevent resuming
+    # from a checkpoint that is not fully saved.
+    filtered_checkpoints = [
+        ckpt for ckpt in checkpoints
+        if os.path.isfile(os.path.join(ckpt, 'trainer_state.json'))]
+    if len(filtered_checkpoints) <= 0:
+        print(
+            "Non of the checkpoints are valid, will not resume from checkpoint.")
+        return False
+
+    # Find the latest checkpoint.
+    checkpoints_number_matches = [
+        re.search(r'checkpoint-(\d+)$', ckpt)
+        for ckpt in filtered_checkpoints]
+    checkpoints_numbers = [int(m.group(1))
+                           for m in checkpoints_number_matches if m]
+    if len(checkpoints_numbers) <= 0:
+        print(
+            "Non of the checkpoints are valid, will not resume from checkpoint.")
+        return False
+
+    last_checkpoint_number = max(checkpoints_numbers)
+    checkpoint_name = f"checkpoint-{last_checkpoint_number}"
+    print(f"Will resume from checkpoint '{checkpoint_name}'.")
+    resume_from_checkpoint = os.path.join(output_dir, checkpoint_name)
+    return resume_from_checkpoint
 
 
 def assert_is_non_blank_string(s, string_name):
