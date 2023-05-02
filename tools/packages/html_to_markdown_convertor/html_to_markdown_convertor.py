@@ -79,6 +79,13 @@ class MdConverter(MarkdownConverter):
         text = convert_inline_latex_to_block_latex(text)
         return super().convert_p(el, text, convert_as_inline)
 
+    # def convert_list(self, el, text, convert_as_inline):
+    #     text = super().convert_list(el, text, convert_as_inline)
+    #     return '\n\n' + text + '\n\n'
+
+    # convert_ul = convert_list
+    # convert_ol = convert_list
+
     convert_b = abstract_inline_conversion_with_spacing(lambda _: '**')
     convert_strong = convert_b
 
@@ -127,18 +134,27 @@ class MdConverter(MarkdownConverter):
                     el.extract()
 
         # Convert the children first
-        for el in node.children:
+        for i, el in enumerate(node.children):
+            prev_element = node.children[i - 1] if i > 0 else None
+            next_element = node.children[i +
+                                         1] if i < len(node.children) - 1 else None
             if isinstance(el, Comment) or isinstance(el, Doctype):
                 continue
             elif isinstance(el, NavigableString):
                 text = concat_text_nodes(
                     text,
-                    self.process_text(el)
+                    self.process_text(el),
+                    current_element=el,
+                    prev_element=prev_element,
+                    next_element=next_element,
                 )
             else:
                 text = concat_text_nodes(
                     text,
-                    self.process_tag(el, convert_children_as_inline)
+                    self.process_tag(el, convert_children_as_inline),
+                    current_element=el,
+                    prev_element=prev_element,
+                    next_element=next_element,
                 )
 
         if not children_only:
@@ -149,7 +165,8 @@ class MdConverter(MarkdownConverter):
         return text
 
 
-def concat_text_nodes(text, text_2):
+def concat_text_nodes(text, text_2,
+                      current_element, prev_element, next_element):
     connector = ''
     # "你好 **hello**"
     if re.search(ENDS_WITH_CJK, text) and re.match(MD_ANS_TAG_START, text_2):

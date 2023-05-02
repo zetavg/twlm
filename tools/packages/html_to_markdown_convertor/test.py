@@ -45,6 +45,43 @@ class TestHTMLToMarkdownConvert(unittest.TestCase):
             """)
         )
 
+    def test_nested_lists(self):
+        print(convert_html_to_markdown(
+                "<ul><li>Item 1<ul><li>Subitem 1</li></ul></li><li>Item 2</li></ul>"))
+        self.assertEqual(
+            convert_html_to_markdown(
+                "<ul><li>Item 1<ul><li>Subitem 1</li></ul></li><li>Item 2</li></ul>"),
+            dedent("""
+                - Item 1
+                  - Subitem 1
+                - Item 2
+                """)
+        )
+
+        self.assertEqual(
+            convert_html_to_markdown(
+                "<ul><li>Item 1<ul><li>Subitem 1<ul><li>Sub-subitem 1</li></ul></li></ul></li><li>Item 2</li></ul>"),
+            dedent("""
+                - Item 1
+                  - Subitem 1
+                    - Sub-subitem 1
+                - Item 2
+                """)
+        )
+
+        self.assertEqual(
+            convert_html_to_markdown(
+                "<ul><li>Item 1<ul><li>Subitem 1</li><li>Subitem 2<ul><li>Sub-subitem 1</li><li>Sub-subitem 2</li></ul></li></ul></li><li>Item 2</li></ul>"),
+            dedent("""
+                - Item 1
+                  - Subitem 1
+                  - Subitem 2
+                    - Sub-subitem 1
+                    - Sub-subitem 2
+                - Item 2
+                """)
+        )
+
     def test_basic_spacing(self):
         self.assertEqual(
             convert_html_to_markdown("你好，<del>世界</del>！"),
@@ -145,6 +182,30 @@ class TestHTMLToMarkdownConvert(unittest.TestCase):
             $$
 
             根據這一形式⋯⋯
+            """)
+        )
+
+    def test_founded_cases(self):
+        self.assertEqual(
+            convert_html_to_markdown("<p><b>所持有的自在法：</b></p><ul><li><b>真紅</b></li></ul><dl><dd>可以幻化出魔神身體的一部分。例如：手、腳(動畫版未出現)、指頭（可用此打破悠二自創的自在法）</dd></dl><ul><li><b>飛焰</b></li></ul><dl><dd>以高速來撒發火焰彈，可藉由自身的意志來控制</dd></dl><ul><li><b>審判</b></li></ul><dl><dd>可觀察出事物的本體以及遠端所隱藏的自在法</dd></dl><ul><li><b>斷罪</b></li></ul><dl><dd>將手中的大刀揮出，即可將火焰藉由刀鋒釋出</dd></dl>"),
+            dedent("""
+            **所持有的自在法：**
+
+            * **真紅**
+
+            可以幻化出魔神身體的一部分。例如：手、腳 (動畫版未出現)、指頭（可用此打破悠二自創的自在法）
+
+            * **飛焰**
+
+            以高速來撒發火焰彈，可藉由自身的意志來控制
+
+            * **審判**
+
+            可觀察出事物的本體以及遠端所隱藏的自在法
+
+            * **斷罪**
+
+            將手中的大刀揮出，即可將火焰藉由刀鋒釋出
             """)
         )
 
