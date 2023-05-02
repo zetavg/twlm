@@ -65,8 +65,8 @@ def page_downloader(batch_size=50):
             except Exception as e:
                 if get_pate_title_retries > MAX_RETRIES:
                     raise e
-                print(f"--- Error: Retrying due to {e}")
-                print("--- EndOfError")
+                tqdm.write(f"--- Error: Retrying due to {e}")
+                tqdm.write("--- EndOfError")
                 time.sleep(2)
                 get_pate_title_retries += 1
         get_pate_title_retries = 0
@@ -80,7 +80,7 @@ def page_downloader(batch_size=50):
         for item in items:
             page_title, base64_page_title = item
             try:
-                print(page_title)
+                tqdm.write(page_title)
 
                 data = get_extracted_html_with_page_title(
                     page_title, additional_info=True)
@@ -105,20 +105,20 @@ def page_downloader(batch_size=50):
                     page_titles_in_progress_collection.document(base64_page_title))
 
             except Exception as e:
-                print(f"---Error on {item}:", str(e))
+                tqdm.write(f"---Error on {item}:", str(e))
                 error_traceback = traceback.format_tb(e.__traceback__)
                 page_titles_in_progress_collection.document(base64_page_title).set({
                     'error': str(e),
                     'error_traceback': error_traceback,
                     'errored_at': time.time(),
                 }, merge=True)
-                print(error_traceback)
-                print("---EndOfError")
+                tqdm.write(error_traceback)
+                tqdm.write("---EndOfError")
 
             progress.update(1)
         batch.commit()
 
-    print("Nothing left to download.")
+    tqdm.write("Nothing left to download.")
 
 
 def get_downloaded_page_markdown(base64_title):
