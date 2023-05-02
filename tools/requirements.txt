@@ -1,0 +1,6 @@
+requests
+markdownify==0.11.6
+pangu
+firebase-admin
+google-cloud-firestore
+tqdm
