@@ -17,10 +17,16 @@ from .db import (
     pages_collection,
 )
 
+session_timestamp = int(time.time())
+file_dir = os.path.dirname(os.path.abspath(__file__))
+log_titles_processed_path = os.path.join(file_dir, 'logs', f"titles_processed_{session_timestamp}.txt")
+
 MAX_RETRIES = 50
 
 
 def page_downloader(batch_size=50):
+    log_titles_processed_file = open(log_titles_processed_path, "a")
+
     @firestore.transactional  # type: ignore
     def get_next_batch_of_page_titles(
             transaction, collection, in_progress_collection):
@@ -77,6 +83,7 @@ def page_downloader(batch_size=50):
             break
 
         batch = db.batch()
+        titles_processed = []
         for item in items:
             page_title, base64_page_title = item
             try:
@@ -103,20 +110,24 @@ def page_downloader(batch_size=50):
                     })
                 batch.delete(
                     page_titles_in_progress_collection.document(base64_page_title))
+                titles_processed.append(page_title)
 
             except Exception as e:
-                tqdm.write(f"---Error on {item}:", str(e))
+                tqdm.write(f"---Error on {item}: {str(e)}")
                 error_traceback = traceback.format_tb(e.__traceback__)
                 page_titles_in_progress_collection.document(base64_page_title).set({
                     'error': str(e),
                     'error_traceback': error_traceback,
                     'errored_at': time.time(),
                 }, merge=True)
-                tqdm.write(error_traceback)
+                tqdm.write(str(error_traceback))
                 tqdm.write("---EndOfError")
 
             progress.update(1)
         batch.commit()
+        log_titles_processed_file.write('\n'.join(titles_processed) + '\n')
+        log_titles_processed_file.flush()
+        titles_processed = []
 
     tqdm.write("Nothing left to download.")
 
