@@ -124,7 +124,15 @@ def page_downloader(batch_size=50):
                 tqdm.write("---EndOfError")
 
             progress.update(1)
-        batch.commit()
+        try:
+            batch.commit()
+        except Exception as e:
+            tqdm.write(f"---Error on saving: {str(e)}")
+            error_traceback = traceback.format_tb(e.__traceback__)
+            tqdm.write(str(error_traceback))
+            tqdm.write("---EndOfError")
+            time.sleep(60)
+
         log_titles_processed_file.write('\n'.join(titles_processed) + '\n')
         log_titles_processed_file.flush()
         titles_processed = []
