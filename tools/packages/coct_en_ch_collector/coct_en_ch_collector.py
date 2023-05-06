@@ -63,6 +63,13 @@ def process_en_sent(text):
             new_text += token
         elif token == "]":
             new_text += token
+        elif token == "(" or token == "[":
+            new_text += ' '
+            new_text += token
+            next_token = get_from_list(tokens, i + 1)
+            if next_token is not None:
+                new_text += next_token
+                skip_next = True
         else:
             new_text += ' '
             new_text += token
