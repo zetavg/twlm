@@ -6,6 +6,15 @@ import sys
 from packages.wiki_page_downloader.move_in_progress_pages_back_for_retry import move_in_progress_pages_back_for_retry
 from packages.wiki_page_downloader.page_downloader import page_downloader, get_downloaded_page_markdown
 from packages.wiki_page_downloader.upload_page_titles_for_downloading import upload_page_titles_for_downloading
+from packages.wiki_page_downloader.create_dataset_from_downloaded_pages import create_dataset_from_downloaded_pages
+
+task_choices = [
+    'download',
+    'upload_titles',
+    'move_in_progress_pages_back_for_retry',
+    'get_downloaded_page_markdown',
+    'create_dataset'
+]
 
 
 def main(argv=sys.argv[1:]):
@@ -16,8 +25,8 @@ def main(argv=sys.argv[1:]):
 
     parser.add_argument(
         'action',
-        choices=['download', 'upload_titles', 'move_in_progress_pages_back_for_retry', 'get_downloaded_page_markdown'],
-        help="Specify the action to perform: 'download', 'upload_titles' or 'move_in_progress_pages_back_for_retry'."
+        choices=task_choices,
+        help=f"Specify the action to perform: {', '.join(task_choices)}"
     )
 
     parser.add_argument(
@@ -36,6 +45,12 @@ def main(argv=sys.argv[1:]):
         '--base64_title',
         default="",
         help="For get_downloaded_page_markdown."
+    )
+
+    parser.add_argument(
+        '--dataset_name',
+        default="",
+        help="For create_dataset."
     )
 
     args = parser.parse_args(argv)
@@ -59,6 +74,12 @@ def main(argv=sys.argv[1:]):
 
     elif args.action == 'get_downloaded_page_markdown':
         print(get_downloaded_page_markdown(args.base64_title))
+
+    elif args.action == 'create_dataset':
+        if args.dataset_name == "":
+            print("--dataset_name must be provided.")
+            sys.exit(1)
+        create_dataset_from_downloaded_pages(args.dataset_name)
 
 
 if __name__ == "__main__":
