@@ -4,8 +4,12 @@ import argparse
 import sys
 import io
 import select
+import json
 
-from packages.wikipedia_utils import get_page_markdown_with_page_title
+from packages.wikipedia_utils import (
+    get_page_markdown_with_page_title,
+    get_page_data,
+    )
 
 
 def main(argv=sys.argv[1:]):
@@ -18,6 +22,13 @@ def main(argv=sys.argv[1:]):
         'title', nargs='?',
         default=sys.stdin,
         help="The title of the Wikipedia page."
+    )
+
+    parser.add_argument(
+        '--format',
+        choices=['markdown', 'json'],
+        default='markdown',
+        help="The return format."
     )
 
     args = parser.parse_args(argv)
@@ -36,7 +47,11 @@ def main(argv=sys.argv[1:]):
     else:
         page_title = args.title
 
-    print(get_page_markdown_with_page_title(page_title))
+    if args.format == 'markdown':
+        print(get_page_markdown_with_page_title(page_title))
+    elif args.format == 'json':
+        dict = get_page_data(page_title)
+        print(json.dumps(dict, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

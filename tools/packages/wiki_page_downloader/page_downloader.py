@@ -6,8 +6,7 @@ import json
 import traceback
 from tqdm.auto import tqdm
 
-from ..wikipedia_utils import get_extracted_html_with_page_title
-from ..html_to_markdown_convertor import convert_html_to_markdown
+from ..wikipedia_utils import get_page_data
 
 from .db import (
     db,
@@ -89,16 +88,13 @@ def page_downloader(batch_size=50):
             try:
                 tqdm.write(page_title)
 
-                data = get_extracted_html_with_page_title(
-                    page_title, additional_info=True)
+                data = get_page_data(page_title)
 
                 batch.set(
                     pages_collection.document(base64_page_title),
                     {
                         'base64_title': base64_page_title,
-                        'markdown': convert_html_to_markdown(data['html']),
                         **data,
-                        'title': page_title,
                     },
                     merge=True)
                 batch.set(
