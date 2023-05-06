@@ -31,6 +31,12 @@ def process_en_sent(text):
             new_text += token
         elif token == '!':
             new_text += token
+        elif token == ';':
+            new_text += token
+        elif token == ':':
+            new_text += token
+        # elif token == '/':
+        #     new_text += token
         elif token == "s'":
             new_text += token
         elif token == '"':
