@@ -41,12 +41,13 @@ run: |
   conda activate zh-tw-pythia
   source setup_env.sh
   python train.py \
-    --tokenizer='zetavg/test-pythia-zh-tw-tokenizer-20230430-1' \
+    --tokenizer='zetavg/test-pythia-zh-tw-tokenizer-50000-20230507' \
     --base_model='EleutherAI/pythia-1b' \
-    --dataset='zetavg/wikipedia_random_page_summaries_zh_tw_100k' \
-    --dataset_column='page_summary' \
+    --dataset='zetavg/zh-tw-wikipedia' \
+    --dataset_column='markdown' \
     --dataset_split='train' \
     --cutoff_len=2048 \
+    --train_data_limit=200000 \
     --per_device_train_batch_size=8 \
     --train_params='embed'  \
     --output_dir='/llm_training_data/zh_tw_pythia/test-skypilot-02' \
