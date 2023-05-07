@@ -6,7 +6,7 @@ from transformers import (
     AutoTokenizer, AutoModelForCausalLM,
     TrainingArguments, Trainer, DataCollatorForSeq2Seq
 )
-from datasets import Dataset, load_dataset
+from datasets import Dataset, load_dataset, load_from_disk
 
 import huggingface_hub
 import wandb
@@ -27,7 +27,7 @@ def main(
     base_model: str,
     tokenizer: str,
     dataset: str,
-    dataset_column: str,
+    dataset_column: Union[str, None] = None,
     dataset_split: str = "train",
     cutoff_len: int = 1024,
     train_params: Union[str, None] = None,
@@ -56,7 +56,7 @@ def main(
     :param base_model: The tokenizer to use. Can be a path to a tokenizer or a model name on Hugging Face Hub, such as 'EleutherAI/pythia-1b', 'EleutherAI/pythia-410m', 'EleutherAI/pythia-160m' or 'EleutherAI/pythia-70m'.
     :param tokenizer: The tokenizer to use. Can be a path to a tokenizer or a model name on Hugging Face Hub, such as 'zetavg/test-pythia-zh-tw-tokenizer-20230430-1'.
     :param dataset: Dataset used for training. Can be a path to a dataset or a dataset name on Hugging Face Hub, such as 'zetavg/wikipedia_random_page_summaries_zh_tw_5k'.
-    :param dataset_column: The column of the dataset to use for training, such as 'page_summary'.
+    :param dataset_column: The column of the dataset to use for training, such as 'page_summary'. If omitted, the dataset will be assumed as a tokenized dataset.
     :param dataset_split: The split of the dataset to use for training, such as 'train'.
 
     :param train_params: If set, will only train the matching parameters of the model. Example: 'embed_in,embed_out,layers.[0-9]+.attention'.
@@ -159,7 +159,7 @@ def train(
     base_model_name: str,
     tokenizer_name: str,
     dataset_name: str,
-    dataset_column: str,
+    dataset_column: Union[str, None],
     dataset_split: str,
     train_data_limit: Union[int, None],
     cutoff_len: int,
@@ -240,29 +240,38 @@ def train(
     print(f"Base model ready.")
 
     print(f"Loading dataset '{dataset_name}'...")
-    ds: Dataset = load_dataset(dataset_name)[dataset_split]  # type: ignore
-    print(f"Preparing dataset...")
-    ds = ds.shuffle()
-    if train_data_limit:
-        ds = ds.select(range(train_data_limit))
+    if os.path.isdir(dataset_name):
+        ds: Dataset = load_from_disk(dataset_name)  # type: ignore
+    else:
+        ds: Dataset = load_dataset(dataset_name)[dataset_split]  # type: ignore
 
-    def tokenize_data(data_point):
-        batch_encoding = tokenizer(
-            # See: https://huggingface.co/docs/transformers/main/en/main_classes/tokenizer#tokenizer
-            data_point[dataset_column],
-            max_length=cutoff_len,
-            truncation=True,
-            padding=False,  # Handled by DataCollatorForSeq2Seq.
-            return_tensors=None  # Handled by the trainer.
-        )
-        batch_encoding["labels"] = batch_encoding["input_ids"].copy()
-        # This is handled by the trainer.
-        # batch_encoding = {k: v.to(device) for k, v in batch_encoding.items()}
-        return batch_encoding
+    if dataset_column:
+        print(f"Preparing dataset...")
+        ds = ds.shuffle()
+        if train_data_limit:
+            ds = ds.select(range(train_data_limit))
 
-    train_data = ds.map(tokenize_data)
-    train_data = train_data.filter(lambda x: len(x["input_ids"]) > 0)
-    # print("Sample train_data:", train_data[0])
+        def tokenize_data(data_point):
+            batch_encoding = tokenizer(
+                # See: https://huggingface.co/docs/transformers/main/en/main_classes/tokenizer#tokenizer
+                data_point[dataset_column],
+                max_length=cutoff_len,
+                truncation=True,
+                padding=False,  # Handled by DataCollatorForSeq2Seq.
+                return_tensors=None  # Handled by the trainer.
+            )
+            batch_encoding["labels"] = batch_encoding["input_ids"].copy()
+            # This is handled by the trainer.
+            # batch_encoding = {k: v.to(device) for k, v in batch_encoding.items()}
+            return batch_encoding
+
+        train_data = ds.map(tokenize_data)
+        train_data = train_data.filter(lambda x: len(x["input_ids"]) > 0)
+        # print("Sample train_data:", train_data[0])
+
+    else:
+        # No dataset_column provided, assuming this dataset is already tokenized.
+        train_data = ds
 
     data_collator = DataCollatorForSeq2Seq(
         tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
