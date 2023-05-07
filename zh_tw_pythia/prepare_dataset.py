@@ -98,7 +98,7 @@ def get_translations_text(data_point):
     en_first = not en_first
     return { 'text': text.strip() }
 trans_train_ds = trans_ds.map(get_translations_text).map(
-    get_tokenize_data_fn('markdown'),
+    get_tokenize_data_fn('text'),
     remove_columns=list(trans_ds.features.keys()),
     desc="Tokenizing translations dataset",
     batched=True,
