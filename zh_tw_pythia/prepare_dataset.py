@@ -13,10 +13,10 @@ os.makedirs(datasets_path, exist_ok=True)
 # Config
 tokenizer_name = 'zetavg/test-pythia-zh-tw-tokenizer-50000-20230507'
 cutoff_len = 2048
-# single_dataset_rows_limit = 200000
-single_dataset_rows_limit = 1000
-# preview_length = 64
-preview_length = 1024
+single_dataset_rows_limit = 300000
+# single_dataset_rows_limit = 1000
+preview_length = 64
+# preview_length = 1024
 dataset_general_name = 'wiki-trans-t'
 
 limit_name = ''
