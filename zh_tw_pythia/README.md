@@ -4,6 +4,8 @@ An attempt to train a Pythia model to understand and speak fluent Taiwan Traditi
 
 ## Train on the Cloud with SkyPilot
 
+> Remember to select the correct GCP project with `gcloud config set project <project>`.
+
 Modify `sky_task.yaml` and run it like:
 
 ```bash
