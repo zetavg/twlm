@@ -1,5 +1,6 @@
 resources:
   accelerators: A100:1
+  region: us-west1
   use_spot: true
 
 file_mounts:
@@ -30,6 +31,7 @@ setup: |
   sudo sh -c "echo 'zh_TW.UTF-8 UTF-8' >> /etc/locale.gen"
   sudo apt-get install locales -y
   sudo locale-gen
+  # locale charmap
 
 run: |
   conda activate zh-tw-pythia
