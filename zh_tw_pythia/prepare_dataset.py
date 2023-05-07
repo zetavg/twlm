@@ -13,8 +13,11 @@ os.makedirs(datasets_path, exist_ok=True)
 # Config
 tokenizer_name = 'zetavg/test-pythia-zh-tw-tokenizer-50000-20230507'
 cutoff_len = 2048
-single_dataset_rows_limit = 200000
-dataset_general_name = 'wiki'
+# single_dataset_rows_limit = 200000
+single_dataset_rows_limit = 1000
+# preview_length = 64
+preview_length = 1024
+dataset_general_name = 'wiki-trans-test'
 
 limit_name = ''
 if single_dataset_rows_limit:
@@ -49,10 +52,10 @@ def get_tokenize_data_fn(dataset_column):
             for i, source_text in enumerate(data_point[dataset_column]):
                 batch_encoding['labels'].append(
                     batch_encoding['input_ids'][i].copy())
-                batch_encoding['preview'].append(source_text[:64])
+                batch_encoding['preview'].append(source_text[:preview_length])
         else:
             batch_encoding["labels"] = batch_encoding["input_ids"].copy()
-            batch_encoding["preview"] = source_text[:64]
+            batch_encoding["preview"] = source_text[:preview_length]
         return batch_encoding
     return tokenize_data
 
@@ -76,8 +79,38 @@ wiki_train_ds = wiki_train_ds.filter(
     batched=True
     )
 
+
+print('Loading translations dataset...')
+trans_ds: Dataset = load_dataset(
+    'zetavg/coct-en-zh-tw-translations-twp-300k')['train']    # type: ignore
+print('Processing translations dataset...')
+trans_ds = trans_ds.shuffle()
+if single_dataset_rows_limit:
+    trans_ds = trans_ds.select(range(single_dataset_rows_limit))
+en_first = True
+def get_translations_text(data_point):
+    global en_first
+    if en_first:
+        text = f"English: {data_point['en']}\nChinese: {data_point['ch']}"
+    else:
+        text = f"Chinese: {data_point['ch']}\nEnglish: {data_point['en']}"
+
+    en_first = not en_first
+    return { 'text': text.strip() }
+trans_train_ds = trans_ds.map(get_translations_text).map(
+    get_tokenize_data_fn('markdown'),
+    remove_columns=list(trans_ds.features.keys()),
+    desc="Tokenizing translations dataset",
+    batched=True,
+    batch_size=512,
+)
+trans_train_ds = trans_train_ds.filter(
+    lambda x: len(x["input_ids"]) > 0,
+    batched=True
+    )
+
 print('Generating merged dataset...')
-train_ds = concatenate_datasets([wiki_train_ds]).shuffle()
+train_ds = concatenate_datasets([wiki_train_ds, trans_train_ds]).shuffle()
 
 print('Saving dataset...')
 train_ds.save_to_disk(os.path.join(datasets_path, dataset_name))
