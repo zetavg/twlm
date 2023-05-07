@@ -390,8 +390,8 @@ class TrainerWithOutputLogging(Trainer):
                     'labels': labels.tolist()
                 })
                 print('------------')
-                print("output:", output_text)
-                print(" label:", label_text)
+                print("output:", output_text.replace('\n', '\\n'))
+                print(" label:", label_text.replace('\n', '\\n'))
                 print('------------')
             except Exception as e:
                 print("inputs:", inputs)
