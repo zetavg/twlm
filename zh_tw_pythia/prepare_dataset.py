@@ -71,7 +71,10 @@ wiki_train_ds = wiki_ds.map(
     batched=True,
     batch_size=512,
 )
-wiki_train_ds = wiki_train_ds.filter(lambda x: len(x["input_ids"]) > 0)
+wiki_train_ds = wiki_train_ds.filter(
+    lambda x: len(x["input_ids"]) > 0,
+    batched=True
+    )
 
 print('Generating merged dataset...')
 train_ds = concatenate_datasets([wiki_train_ds]).shuffle()
