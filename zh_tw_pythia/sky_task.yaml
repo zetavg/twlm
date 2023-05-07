@@ -10,10 +10,6 @@ file_mounts:
     name: llm-training-gcs-08
     store: gcs  # Could be either of [s3, gcs]
     mode: MOUNT
-  /cache:
-    name: zh-tw-pythia-skypilot-cache
-    store: gcs
-    mode: MOUNT
 
 workdir: ./sky_workdir
 
@@ -24,8 +20,6 @@ setup: |
   conda create -q python=3.8 -n zh-tw-pythia -y
   conda activate zh-tw-pythia
   pip install -r requirements.txt
-  # prepare cache
-  rsync -a --exclude 'token' /cache/huggingface/. ~/.cache/huggingface/ --itemize-changes
   # nvtop
   wget https://github.com/Syllo/nvtop/releases/download/3.0.1/nvtop-3.0.1-x86_64.AppImage
   sudo chmod +x nvtop-3.0.1-x86_64.AppImage
@@ -54,5 +48,3 @@ run: |
     --run_name='test-skypilot-02' \
     --wandb_project='test-project' \
     --push_to_hf --hf_hub_private_repo
-  # save cache
-  rsync -a --exclude 'token' ~/.cache/huggingface/. /cache/huggingface/ --itemize-changes
