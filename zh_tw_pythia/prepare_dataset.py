@@ -74,10 +74,10 @@ wiki_train_ds = wiki_ds.map(
     batched=True,
     batch_size=512,
 )
-# wiki_train_ds = wiki_train_ds.filter(
-#     lambda x: len(x["input_ids"]) > 0,
-#     batched=True
-#     )
+wiki_train_ds = wiki_train_ds.filter(
+    lambda x: len(x["input_ids"]) > 0,
+    # batched=True
+    )
 
 
 print('Loading translations dataset...')
@@ -104,10 +104,10 @@ trans_train_ds = trans_ds.map(get_translations_text).map(
     batched=True,
     batch_size=512,
 )
-# trans_train_ds = trans_train_ds.filter(
-#     lambda x: len(x["input_ids"]) > 0,
-#     batched=True
-#     )
+trans_train_ds = trans_train_ds.filter(
+    lambda x: len(x["input_ids"]) > 0,
+    # batched=True
+    )
 
 print('Generating merged dataset...')
 train_ds = concatenate_datasets([wiki_train_ds, trans_train_ds]).shuffle()
