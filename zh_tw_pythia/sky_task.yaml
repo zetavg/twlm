@@ -29,6 +29,7 @@ run: |
     --dataset='zetavg/wikipedia_random_page_summaries_zh_tw_100k' \
     --dataset_column='page_summary' \
     --dataset_split='train' \
+    --cutoff_len=2048 \
     --per_device_train_batch_size=8 \
     --train_params='embed'  \
     --output_dir='/llm_training_data/zh_tw_pythia/test-skypilot-02' \

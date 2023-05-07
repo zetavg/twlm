@@ -29,6 +29,7 @@ def main(
     dataset: str,
     dataset_column: str,
     dataset_split: str = "train",
+    cutoff_len: int = 1024,
     train_params: Union[str, None] = None,
     # Output
     output_dir: str = f"./output-{started_time_str}",
@@ -127,6 +128,9 @@ def main(
             save_code=True,
             magic=True,
         )
+        wandb.config.update({
+            'cutoff_len': cutoff_len,
+        })
 
     train(
         base_model_name=base_model,
@@ -135,6 +139,7 @@ def main(
         dataset_column=dataset_column,
         dataset_split=dataset_split,
         train_data_limit=train_data_limit,
+        cutoff_len=cutoff_len,
         train_params=[param_name.strip()
                       for param_name in train_params.split(",")] if train_params else None,
         per_device_train_batch_size=per_device_train_batch_size,
@@ -157,6 +162,7 @@ def train(
     dataset_column: str,
     dataset_split: str,
     train_data_limit: Union[int, None],
+    cutoff_len: int,
     train_params: Union[List[str], None],
     per_device_train_batch_size: int,
     logging_steps: int,
@@ -235,15 +241,16 @@ def train(
 
     print(f"Loading dataset '{dataset_name}'...")
     ds: Dataset = load_dataset(dataset_name)[dataset_split]  # type: ignore
+    print(f"Preparing dataset...")
+    ds = ds.shuffle()
     if train_data_limit:
-        ds = ds.filter(lambda _, idx: idx <
-                       train_data_limit, with_indices=True)
+        ds = ds.select(range(train_data_limit))
 
     def tokenize_data(data_point):
         batch_encoding = tokenizer(
             # See: https://huggingface.co/docs/transformers/main/en/main_classes/tokenizer#tokenizer
             data_point[dataset_column],
-            max_length=1024,
+            max_length=cutoff_len,
             truncation=True,
             padding=False,  # Handled by DataCollatorForSeq2Seq.
             return_tensors=None  # Handled by the trainer.
