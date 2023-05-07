@@ -17,12 +17,12 @@ cutoff_len = 2048
 single_dataset_rows_limit = 1000
 # preview_length = 64
 preview_length = 1024
-dataset_general_name = 'wiki-trans-test'
+dataset_general_name = 'wiki-trans-t'
 
 limit_name = ''
 if single_dataset_rows_limit:
-    limit_name = f'-limit-{single_dataset_rows_limit}'
-dataset_name = f"ds-train-{tokenizer_name.replace('/', '-')}-{dataset_general_name}-cutoff-{cutoff_len}{limit_name}"
+    limit_name = f'-lm{single_dataset_rows_limit}'
+dataset_name = f"tds-{tokenizer_name.replace('/', '-')}-{dataset_general_name}-c{cutoff_len}{limit_name}"
 
 print(f"Loading tokenizer '{tokenizer_name}'...")
 tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
