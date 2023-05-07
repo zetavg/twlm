@@ -1,5 +1,6 @@
 resources:
   accelerators: A100:1
+  cloud: gcp
   region: us-west1
   use_spot: true
 
