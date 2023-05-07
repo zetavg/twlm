@@ -68,6 +68,7 @@ def main(argv=sys.argv[1:]):
     print("deduped data lines:", len(data_d))
     ds = Dataset.from_list(data_d)
     print("dataset size:", len(ds))
+    ds.save_to_disk(os.path.join(file_dir, f"dataset-{args.name}"))
     ds.push_to_hub(args.name)
 
     print(f"Done.")
