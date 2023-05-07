@@ -25,9 +25,9 @@ setup: |
   sudo chmod +x nvtop-3.0.1-x86_64.AppImage
   sudo cp nvtop-3.0.1-x86_64.AppImage /usr/local/bin/nvtop
   # locale
-  sudo echo 'LANGUAGE=zh_TW.UTF-8' >> /etc/default/locale
-  sudo echo 'LC_ALL=zh_TW.UTF-8' >> /etc/default/locale
-  sudo echo 'zh_TW.UTF-8 UTF-' >> /etc/locale.gen
+  sudo sh -c "echo 'LANGUAGE=zh_TW.UTF-8' >> /etc/default/locale"
+  sudo sh -c "echo 'LC_ALL=zh_TW.UTF-8' >> /etc/default/locale"
+  sudo sh -c "echo 'zh_TW.UTF-8 UTF-8' >> /etc/locale.gen"
   sudo apt-get install locales -y
   sudo locale-gen
 
