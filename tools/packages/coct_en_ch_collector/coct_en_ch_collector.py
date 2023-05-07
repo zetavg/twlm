@@ -23,6 +23,8 @@ def import_relative_file(module_name, relative_path):
     return module
 
 
+sys.setrecursionlimit(64000)
+
 utils = import_relative_file("utils", "utils.py")
 process_en_sent = utils.process_en_sent
 process_ch_sent = utils.process_ch_sent
