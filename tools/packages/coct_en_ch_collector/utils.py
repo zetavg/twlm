@@ -15,9 +15,7 @@ def process_en_sent(text):
         if skip_next:
             skip_next = False
             continue
-        if not new_text:
-            new_text = token
-        elif token == ',':
+        if token == ',':
             new_text += token
         elif token == '.':
             new_text += token
