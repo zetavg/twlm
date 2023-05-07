@@ -4,7 +4,9 @@ import os
 import argparse
 import sys
 import json
+import time
 from datasets import Dataset
+from tqdm import tqdm
 
 import sys
 from pathlib import Path
@@ -52,17 +54,21 @@ def main(argv=sys.argv[1:]):
     print(f"Pushing to HF Hub as '{args.name}'...")
 
     with open(output_file_path, 'r') as f:
-        data = [json.loads(line) for line in f]
-        print("data lines:", len(data))
-        data_dict = {
-            process_en_sent(d['raw_en']) if d.get('raw_en') else d['en']:
-            process_ch_sent(d['raw_ch']) if d.get('raw_ch') else d['ch']
-            for d in data}
-        data_d = [{'en': k, 'ch': v} for k, v in data_dict.items()]
-        print("deduped data lines:", len(data_d))
-        ds = Dataset.from_list(data_d)
-        print("dataset size:", len(ds))
-        ds.push_to_hub(args.name)
+        print('Loading data...')
+        data = [json.loads(line) for line in tqdm(f)]
+    data_lines = len(data)
+    print("data lines:", data_lines)
+    print('Processing data...')
+    data_dict = {}
+    for d in tqdm(data):
+        en_text = process_en_sent(d['raw_en']) if d.get('raw_en') else d['en']
+        ch_text = process_ch_sent(d['raw_ch']) if d.get('raw_ch') else d['ch']
+        data_dict[en_text] = ch_text
+    data_d = [{'en': k, 'ch': v} for k, v in tqdm(data_dict.items())]
+    print("deduped data lines:", len(data_d))
+    ds = Dataset.from_list(data_d)
+    print("dataset size:", len(ds))
+    ds.push_to_hub(args.name)
 
     print(f"Done.")
 
