@@ -5,6 +5,28 @@ import sys
 import json
 from datasets import Dataset
 
+import sys
+from pathlib import Path
+import importlib.util
+
+
+def import_relative_file(module_name, relative_path):
+    file_path = Path(__file__).parent / relative_path
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if not spec:
+        raise Exception(f"Can't find file {file_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    if not spec.loader:
+        raise Exception(f"Can't find file {file_path}")
+    spec.loader.exec_module(module)
+    return module
+
+
+utils = import_relative_file("utils", "utils.py")
+process_en_sent = utils.process_en_sent
+process_ch_sent = utils.process_ch_sent
+
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(
@@ -28,8 +50,11 @@ def main(argv=sys.argv[1:]):
     with open('packages/coct_en_ch_collector/output.jsonl', 'r') as f:
         data = [json.loads(line) for line in f]
         print("data lines:", len(data))
-        data_dict = {d['en']: d['ch'] for d in data}
-        data_d = [{'en': k, 'ch': v }for k, v in data_dict.items()]
+        data_dict = {
+            process_en_sent(d['raw_en']) if d.get('raw_en') else d['en']:
+            process_ch_sent(d['raw_ch']) if d.get('raw_ch') else d['ch']
+            for d in data}
+        data_d = [{'en': k, 'ch': v} for k, v in data_dict.items()]
         print("deduped data lines:", len(data_d))
         ds = Dataset.from_list(data_d)
         print("dataset size:", len(ds))
