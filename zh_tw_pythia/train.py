@@ -296,11 +296,12 @@ def train(
         save_steps=save_steps,
         save_total_limit=save_total_limit,
         # HF
-        push_to_hub=True if push_to_hf_hub_model_name else False,
-        hub_model_id=push_to_hf_hub_model_name,
-        hub_private_repo=hf_hub_private_repo,
+        # Will override the output_dir, clearing all checkpoints!
+        # push_to_hub=True if push_to_hf_hub_model_name else False,
+        # hub_model_id=push_to_hf_hub_model_name,
+        # hub_private_repo=hf_hub_private_repo,
         # hub_strategy="all_checkpoints",  # Problematic
-        hub_strategy="end",
+        # hub_strategy="end",
         # WandB
         report_to=['wandb'] if use_wandb else None,
         # Other
