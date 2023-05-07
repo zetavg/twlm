@@ -317,7 +317,7 @@ def train(
         args=training_args
     )
     trainer._output_logging_tokenizer = tokenizer  # type: ignore
-    trainer.log_output_every_n_steps = logging_steps * 50  # type: ignore
+    trainer.log_output_every_n_steps = logging_steps * 20  # type: ignore
 
     if resume_from_checkpoint:
         if isinstance(resume_from_checkpoint, str):
