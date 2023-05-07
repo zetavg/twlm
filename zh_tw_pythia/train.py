@@ -365,6 +365,7 @@ class TrainerWithOutputLogging(Trainer):
                 logits = outputs.logits  # type: ignore
                 # Get the token IDs with the highest probabilities
                 token_ids = logits.argmax(dim=-1).squeeze().tolist()
+                token_ids = token_ids[:1024]
                 if isinstance(token_ids[0], list):
                     # is in a batch, get thee first one
                     token_ids = token_ids[0]
@@ -372,6 +373,7 @@ class TrainerWithOutputLogging(Trainer):
                 labels = inputs['labels'][0]
                 labels_to_decode = labels[1:]
                 labels_to_decode = labels_to_decode[labels_to_decode > 0]
+                labels_to_decode = labels_to_decode[:1024]
                 label_text = tokenizer.decode(labels_to_decode)
 
                 self.log({
@@ -380,8 +382,10 @@ class TrainerWithOutputLogging(Trainer):
                     'output_token_ids': token_ids,
                     'labels': labels.tolist()
                 })
+                print('------------')
                 print("output:", output_text)
                 print(" label:", label_text)
+                print('------------')
             except Exception as e:
                 print("inputs:", inputs)
                 print("compute_loss_result:", compute_loss_result)
