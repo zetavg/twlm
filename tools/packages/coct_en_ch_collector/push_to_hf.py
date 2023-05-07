@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import argparse
 import sys
 import json
@@ -27,6 +28,9 @@ utils = import_relative_file("utils", "utils.py")
 process_en_sent = utils.process_en_sent
 process_ch_sent = utils.process_ch_sent
 
+file_dir = os.path.dirname(os.path.abspath(__file__))
+output_file_path = os.path.join(file_dir, 'output.jsonl')
+
 
 def main(argv=sys.argv[1:]):
     parser = argparse.ArgumentParser(
@@ -47,7 +51,7 @@ def main(argv=sys.argv[1:]):
 
     print(f"Pushing to HF Hub as '{args.name}'...")
 
-    with open('packages/coct_en_ch_collector/output.jsonl', 'r') as f:
+    with open(output_file_path, 'r') as f:
         data = [json.loads(line) for line in f]
         print("data lines:", len(data))
         data_dict = {
