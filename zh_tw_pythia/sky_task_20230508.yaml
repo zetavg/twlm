@@ -1,0 +1,51 @@
+resources:
+  accelerators: A100:1
+  cloud: gcp
+  # region: us-west1
+  use_spot: true
+
+file_mounts:
+  # Mount a presisted cloud storage.
+  # See https://skypilot.readthedocs.io/en/latest/reference/storage.html for details.
+  /llm_training_data:
+    # Make sure this name is unique or you own this bucket. If it does not exists, SkyPilot will try to create a bucket with this name.
+    name: llm-training-gcs-08
+    store: gcs  # Could be either of [s3, gcs]
+    mode: MOUNT
+
+workdir: ./sky_workdir
+
+setup: |
+  sudo apt-get install git-lfs
+  git lfs install --skip-repo
+  git config --global credential.helper store
+  conda create -q python=3.8 -n zh-tw-pythia -y
+  conda activate zh-tw-pythia
+  pip install -r requirements.txt
+  # nvtop
+  wget https://github.com/Syllo/nvtop/releases/download/3.0.1/nvtop-3.0.1-x86_64.AppImage
+  sudo chmod +x nvtop-3.0.1-x86_64.AppImage
+  sudo cp nvtop-3.0.1-x86_64.AppImage /usr/local/bin/nvtop
+  # locale
+  sudo sh -c "echo 'LANGUAGE=zh_TW.UTF-8' >> /etc/default/locale"
+  sudo sh -c "echo 'LC_ALL=zh_TW.UTF-8' >> /etc/default/locale"
+  sudo sh -c "echo 'zh_TW.UTF-8 UTF-8' >> /etc/locale.gen"
+  sudo apt-get install locales -y
+  sudo locale-gen
+  # locale charmap
+
+run: |
+  conda activate zh-tw-pythia
+  python train.py \
+    --tokenizer='zetavg/t-pythia-zh-tw-tokenizer-a50000-20230508-2' \
+    --base_model='EleutherAI/pythia-1b' \
+    --dataset='zetavg/tds-zh-tw-pythia-20230508-2' \
+    --dataset_split='train' \
+    --per_device_train_batch_size=3 \
+    --train_params='embed' \
+    --output_dir='/llm_training_data/zh_tw_pythia/pythia-1b-zh-tw-230508-tokenizer-50000-on-a100-pret-wt-test-02' \
+    --save_steps=1000 \
+    --run_name='pythia-1b-zh-tw-230508-tokenizer-50000-on-a100-pret-wt-test-02' \
+    --wandb_project='zh-tw-llm' \
+    --wandb_group='pythia' \
+    --push_to_hf --hf_hub_private_repo
