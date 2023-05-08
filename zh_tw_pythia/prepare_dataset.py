@@ -11,7 +11,7 @@ datasets_path = os.path.join(file_dir, 'datasets')
 os.makedirs(datasets_path, exist_ok=True)
 
 # Config
-tokenizer_name = 'zetavg/test-pythia-zh-tw-tokenizer-50000-20230507'
+tokenizer_name = 'zetavg/t-pythia-zh-tw-tokenizer-a50000-20230508'
 cutoff_len = 2048
 single_dataset_rows_limit = 300000
 # single_dataset_rows_limit = 1000
