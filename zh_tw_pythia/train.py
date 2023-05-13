@@ -109,6 +109,15 @@ def main(
         print()
 
     resume_from_checkpoint = find_checkpoint_to_resume(model_output_path)
+    if resume_from_checkpoint:
+        possible_training_args_path = \
+            os.path.join(resume_from_checkpoint, 'training_args.bin')
+        if os.path.isfile(possible_training_args_path):
+            # Allows the training args to be changed.
+            os.rename(
+                possible_training_args_path,
+                os.path.join(resume_from_checkpoint, 'old_training_args.bin')
+            )
 
     tokenizer = load_tokenizer(config, paths)
 
