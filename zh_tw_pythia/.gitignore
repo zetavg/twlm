@@ -5,3 +5,6 @@ __pycache__
 
 /sky_training.yaml
 /sky_prepare.sh
+
+/save_now
+/abort

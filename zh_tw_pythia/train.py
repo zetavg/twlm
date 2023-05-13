@@ -8,7 +8,8 @@ import wandb
 import traceback
 from transformers import (
     AutoTokenizer, AutoModelForCausalLM,
-    TrainingArguments, Trainer, DataCollatorForSeq2Seq
+    TrainingArguments, Trainer, DataCollatorForSeq2Seq,
+    TrainerCallback
 )
 from tokenizers import Tokenizer as TokenizerFast
 from datasets import Dataset, load_dataset, concatenate_datasets
@@ -18,7 +19,7 @@ from termcolor import colored
 from textwrap import indent, dedent
 
 from utils.config import Config
-from utils.paths import Paths
+from utils.paths import Paths, project_dir
 from utils.get_training_config_values import get_training_config_values
 from utils.load import load_tokenizer, load_dataset
 from utils.formatting import (
@@ -45,6 +46,8 @@ def main(
     config_file_path: Union[str, None] = None,
     data_dir_path: Union[str, None] = None,
 ):
+    global early_abort
+
     paths = Paths(data_dir_path)
     if cfg and not config_file_path:
         config_file_path = paths.get_config_path(cfg)
@@ -220,7 +223,8 @@ def main(
         tokenizer=tokenizer,
         train_dataset=train_dataset,  # type: ignore
         data_collator=data_collator,
-        args=training_args
+        args=training_args,
+        callbacks=[TrainerControlCallback],  # type: ignore
     )
     trainer._output_logging_tokenizer = tokenizer  # type: ignore
     trainer.log_output_every_n_steps = training_args.logging_steps * 20  # type: ignore
@@ -253,6 +257,9 @@ def main(
     print(f"Saving model to {model_output_path}...")
     model.save_pretrained(model_output_path)
     tokenizer.save_pretrained(model_output_path)
+    if early_abort:
+        with open(os.path.join(model_output_path, 'early_abort.json'), 'w') as f:
+            json.dump(early_abort, f, indent=2, ensure_ascii=False)
     print(colored(
         f"Model saved to {model_output_path}.",
         attrs=['bold']
@@ -282,7 +289,14 @@ def main(
         # {model_name}
 
         This model is a part of the `{config.project_name}` project.
-
+        """).strip()
+        if early_abort:
+            model_card_content += '\n'
+            model_card_content += dedent(f"""
+            **Training has been early aborted at `epoch` `{early_abort.get('epoch')}`, `global_step` `{early_abort.get('global_step')}`.**
+            """).strip()
+        model_card_content += '\n'
+        model_card_content += dedent(f"""
         * Base model: `{base_on_model_name_or_path}`
         * Tokenizer: `{tokenizer_name}`
         * Vocab size: `{tokenizer.vocab_size}`
@@ -466,6 +480,36 @@ def find_checkpoint_to_resume(output_dir):
     print()
     resume_from_checkpoint = os.path.join(output_dir, checkpoint_name)
     return resume_from_checkpoint
+
+
+early_abort: Any = False
+
+
+class TrainerControlCallback(TrainerCallback):
+    def on_log(self, args, state, control, **kwargs):
+        global early_abort
+        if os.path.isfile(os.path.join(project_dir, 'save_now')):
+            print(colored(
+                "'save_now' file detected! Saving a checkpoint now.",
+                attrs=['bold']
+            ))
+            print()
+            control.should_save = True
+            os.remove(os.path.join(project_dir, 'save_now'))
+
+        if os.path.isfile(os.path.join(project_dir, 'abort')):
+            print(colored(
+                "'abort' file detected! Stopping training now.",
+                'yellow',
+                attrs=['bold']
+            ))
+            print()
+            control.should_training_stop = True
+            early_abort = {
+                'epoch': state.epoch,
+                'global_step': state.global_step,
+            }
+            os.remove(os.path.join(project_dir, 'abort'))
 
 
 if __name__ == "__main__":
