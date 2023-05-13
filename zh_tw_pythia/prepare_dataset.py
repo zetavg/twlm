@@ -65,6 +65,13 @@ def prepare_dataset(
                 tokenizer, dataset_config,
                 dataset_config.get_settings_for(build_type))
             datasets.append(ds)
+
+        if build_type == 'alpaca':
+            ds = generate_alpaca_dataset(
+                tokenizer, dataset_config,
+                dataset_config.get_settings_for(build_type))
+            datasets.append(ds)
+
         else:
             raise Exception(
                 f"Unknown dataset build method '{build_type}'. Check {dataset_config.config_file_path}")
@@ -157,14 +164,14 @@ def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
 
 def generate_translations_dataset(tokenizer, dataset_config, settings):
     source_ds_name = settings.get('source_dataset')
-    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {config.config_file_path}."
+    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
 
     lang_1_key = settings.get('lang_1_key')
-    assert lang_1_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_1_key'])} is missing in config {config.config_file_path}."
+    assert lang_1_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_1_key'])} is missing in config {dataset_config.config_file_path}."
     lang_2_key = settings.get('lang_2_key')
-    assert lang_2_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_2_key'])} is missing in config {config.config_file_path}."
+    assert lang_2_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_2_key'])} is missing in config {dataset_config.config_file_path}."
     templates = settings.get('templates')
-    assert templates, f"{dataset_config.get_config_level_str(['translations_settings', 'templates'])} is missing in config {config.config_file_path}."
+    assert templates, f"{dataset_config.get_config_level_str(['translations_settings', 'templates'])} is missing in config {dataset_config.config_file_path}."
 
     rows_limit = settings.get('rows_limit')
 
@@ -213,6 +220,101 @@ def generate_translations_dataset(tokenizer, dataset_config, settings):
     )
 
     print(f"Translations dataset ok. Has {len(ds)} items.")
+    print()
+
+    return ds
+
+
+def generate_alpaca_dataset(tokenizer, dataset_config, settings):
+    source_ds_name = settings.get('source_dataset')
+    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
+
+    rows_limit = settings.get('rows_limit')
+    template = settings.get('template')
+
+    print(f"Loading alpaca dataset '{source_ds_name}'...")
+    source_ds: Dataset = \
+        load_dataset(source_ds_name)['train']  # type: ignore
+
+    print('Processing alpaca dataset...')
+
+    if rows_limit:
+        print(f"Limiting to {rows_limit} rows.")
+        source_ds = source_ds.select(range(rows_limit))
+
+    def get_alpaca_text(batch):
+        batch_output = {'text': []}
+
+        for instruction, input, output in zip(
+                batch['instruction'], batch['input'], batch['output']):
+
+            if template == 'short':
+                if input:
+                    text = dedent(f"""
+                        ### Instruction:
+                        {instruction}
+
+                        ### Input:
+                        {input}
+
+                        ### Response:
+                        {output}
+                    """).strip()
+                else:
+                    text = dedent(f"""
+                        ### Instruction:
+                        {instruction}
+
+                        ### Response:
+                        {output}
+                    """).strip()
+            else:
+                if input:
+                    text = dedent(f"""
+                        Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+                        ### Instruction:
+                        {instruction}
+
+                        ### Input:
+                        {input}
+
+                        ### Response:
+                        {output}
+                    """).strip()
+                else:
+                    text = dedent(f"""
+                        Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+                        ### Instruction:
+                        {instruction}
+
+                        ### Response:
+                        {output}
+                    """).strip()
+            batch_output['text'].append(text.strip())
+        return batch_output
+
+    ds = source_ds.map(
+        get_alpaca_text,
+        batched=True,
+        remove_columns=list(source_ds.features.keys()))
+
+    print('Tokenizing alpaca dataset...')
+
+    ds = ds.map(
+        get_tokenize_data_fn(
+            tokenizer=tokenizer,
+            dataset_column='text',
+            max_length=dataset_config.max_training_text_length,
+            preview_length=dataset_config.preview_length,
+        ),
+        remove_columns=['text'],
+        batched=True,
+        batch_size=512,
+    )
+
+    print(f"Alpaca dataset ok. Has {len(ds)} items.")
     print()
 
     return ds
