@@ -1,0 +1,56 @@
+resources:
+  accelerators: A100:1
+  cloud: gcp
+  region: us-central1
+  use_spot: true
+
+file_mounts:
+  # Mount a persisted cloud storage.
+  # See https://skypilot.readthedocs.io/en/latest/reference/storage.html for details.
+  /llm_training_data:
+    # Make sure this name is unique or you own this bucket. If it does not exists, SkyPilot will try to create a bucket with this name.
+    name: change-me
+    store: gcs  # Could be either of [s3, gcs]
+    mode: MOUNT
+
+workdir: ./sky_workdir
+
+setup: |
+  sudo apt-get install git-lfs htop
+  git lfs install --skip-repo
+  git config --global credential.helper store
+  if conda info --envs | grep -q zh-tw-llm; then
+    echo "conda env already exists"
+  else
+    conda create -q python=3.8 -n zh-tw-llm -y
+  fi
+  conda activate zh-tw-llm
+  pip install -r requirements.txt
+
+  # nvtop
+  if [ ! -f '/usr/local/bin/nvtop' ]; then
+    echo "Installing nvtop"
+    wget https://github.com/Syllo/nvtop/releases/download/3.0.1/nvtop-3.0.1-x86_64.AppImage
+    sudo chmod +x nvtop-3.0.1-x86_64.AppImage
+    sudo cp nvtop-3.0.1-x86_64.AppImage /usr/local/bin/nvtop
+  fi
+
+  # locale
+  if cat /etc/default/locale | grep -q LANGUAGE=zh_TW.UTF-8; then
+    echo "Locale already set"
+  else
+    echo "Setting up locale"
+    sudo sh -c "echo 'LANGUAGE=zh_TW.UTF-8' >> /etc/default/locale"
+    sudo sh -c "echo 'LC_ALL=zh_TW.UTF-8' >> /etc/default/locale"
+    sudo sh -c "echo 'zh_TW.UTF-8 UTF-8' >> /etc/locale.gen"
+    sudo apt-get install locales -y
+    sudo locale-gen
+  fi
+  locale charmap
+
+run: |
+  export FORCE_COLOR=true
+  export DATA_DIR='/llm_training_data/zh-tw-llm'
+  mkdir -p "$DATA_DIR"
+  conda activate zh-tw-llm
+  python train.py "$TRAIN_NAME" --cfg="$CFG" --data_dir_path="$DATA_DIR"

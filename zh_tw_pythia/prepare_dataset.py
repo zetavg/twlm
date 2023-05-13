@@ -1,46 +1,134 @@
+from typing import Union
+
 import os
-from datasets import Dataset, load_dataset, concatenate_datasets
+import re
+import fire
+import json
 from transformers import AutoTokenizer
+from tokenizers import Tokenizer as TokenizerFast
+from datasets import Dataset, load_dataset, concatenate_datasets
+from huggingface_hub import HfFileSystem
+from tqdm import tqdm
+from termcolor import colored
+from textwrap import indent, dedent
 
-from datetime import datetime, timezone
-
-started_time = datetime.now(timezone.utc)
-started_time_str = started_time.strftime('%Y-%m-%d-%H-%M-%S')
-file_dir = os.path.dirname(os.path.abspath(__file__))
-datasets_path = os.path.join(file_dir, 'datasets')
-os.makedirs(datasets_path, exist_ok=True)
-
-# Config
-tokenizer_name = 'zetavg/t-pythia-zh-tw-tokenizer-a50000-20230508-2'
-cutoff_len = 2048
-single_dataset_rows_limit = 300000
-# single_dataset_rows_limit = 1000
-preview_length = 64
-# preview_length = 1024
-dataset_general_name = 'wiki-trans-t'
-
-limit_name = ''
-if single_dataset_rows_limit:
-    limit_name = f'-lm{single_dataset_rows_limit}'
-dataset_name = f"tds-{tokenizer_name.replace('/', '-')}-{dataset_general_name}-c{cutoff_len}{limit_name}"
-
-print(f"Loading tokenizer '{tokenizer_name}'...")
-tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-
-# if no pad token, set it to eos
-if tokenizer.pad_token is None:
-    print(
-        f"Tokenizer has no pad_token set, setting it to 1.")
-    tokenizer.pad_token_id = 1
-print(f"Tokenizer loaded. Vocab size: {tokenizer.vocab_size}.")
+from utils.config import Config
+from utils.paths import Paths
+from utils.load import load_tokenizer
+from utils.formatting import (
+    better_format_pairs_in_json_text,
+    get_human_timestamp,
+    human_short_number as hs_number,
+    truncate_string_by_lines,
+)
+from utils.data_processing import (
+    shallow_diff_dict,
+    unique_list,
+)
+from utils.type_checking import (
+    assert_list_of_strings,
+)
+from utils.tokenize_splits_preview import tokenize_splits_preview
+from utils.update_hf_readme import update_hf_readme
 
 
-def get_tokenize_data_fn(dataset_column):
+def prepare_dataset(
+    train_name: str,
+    cfg: Union[str, None] = None,
+    config_file_path: Union[str, None] = None,
+    data_dir_path: Union[str, None] = None,
+    do_not_save=False,
+):
+    paths = Paths(data_dir_path)
+    if cfg and not config_file_path:
+        config_file_path = paths.get_config_path(cfg)
+    config = Config(config_file_path)
+    training_config = config.get_training_config(train_name)
+    dataset_config = training_config.dataset_config
+
+    message = ''
+    message += f"Preparing dataset '{dataset_config.dataset_name}' "
+    message += f"using tokenizer '{config.tokenizer_name}' "
+    message += f"with '{dataset_config.build_with}' "
+    message += f", max_training_text_length={dataset_config.max_training_text_length} "
+    message += "..."
+    print(message)
+    print()
+
+    tokenizer = load_tokenizer(config, paths)
+
+    datasets = []
+
+    for build_type in dataset_config.build_with:
+        if build_type == 'translations':
+            ds = generate_translations_dataset(
+                tokenizer, dataset_config,
+                dataset_config.get_settings_for(build_type))
+            datasets.append(ds)
+        else:
+            raise Exception(
+                f"Unknown dataset build method '{build_type}'. Check {dataset_config.config_file_path}")
+
+    print("Preparing final dataset...")
+    dataset = concatenate_datasets(datasets)
+    print(f"Concatenated dataset contains {len(dataset)} rows.")
+
+    dataset = dataset.filter(lambda x: x['input_ids'])
+    dataset = dataset.shuffle()
+    print(colored(
+        f"Final dataset contains {len(dataset)} rows.",
+        attrs=['bold']
+    ))
+    print()
+
+    if not do_not_save:
+        print('Saving dataset...')
+        dataset_save_path = paths.get_dataset_path(dataset_config.dataset_name)
+        dataset.save_to_disk(dataset_save_path)
+        print(f"Dataset saved to {dataset_save_path}.")
+        print()
+
+    if config.push_outputs_to_hf:
+        hf_dataset_name = \
+            f"{config.hf_user_or_org_name}/{dataset_config.dataset_name}"
+        hf_dataset_path = f"datasets/{hf_dataset_name}"
+
+        if not do_not_save:
+            print('Pushing dataset to HF Hub...')
+            dataset.push_to_hub(hf_dataset_name, private=True)
+
+        print("Updating dataset card...")
+        dataset_card_frontmatter = {}
+        dataset_card_content = dedent(f"""
+        # {dataset_config.dataset_name}
+
+        This dataset is a part of the `{config.project_name}` project.
+
+        * Tokenizer: `{config.tokenizer_name}`
+        * Built with: {', '.join(f"`{s}`" for s in dataset_config.build_with)}
+        * Rows: `{len(dataset)}`
+        * Max length: `{dataset_config.max_training_text_length}`
+        * Full config:
+          ```json
+          {dataset_config.to_json()}
+          ```
+        """).strip()
+        update_hf_readme(
+            hf_dataset_path,
+            dataset_card_content,
+            dataset_card_frontmatter)
+        print(colored(
+            f"Dataset uploaded to https://huggingface.co/{hf_dataset_path}.",
+            attrs=['bold']
+        ))
+
+
+def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
     def tokenize_data(data_point):
         batch_encoding = tokenizer(
             # See: https://huggingface.co/docs/transformers/main/en/main_classes/tokenizer#tokenizer
             data_point[dataset_column],
-            max_length=cutoff_len,
+            max_length=max_length,
             truncation=True,
             padding=False,  # Handled by DataCollatorForSeq2Seq.
             return_tensors=None  # Handled by the trainer.
@@ -52,68 +140,83 @@ def get_tokenize_data_fn(dataset_column):
             for i, source_text in enumerate(data_point[dataset_column]):
                 batch_encoding['labels'].append(
                     batch_encoding['input_ids'][i].copy())
-                batch_encoding['preview'].append(source_text[:preview_length])
+                preview_text = source_text
+                if len(preview_text) > preview_length:
+                    preview_text = preview_text[:preview_length] + ' [...]'
+                batch_encoding['preview'].append(preview_text)
         else:
+            # not batched
             batch_encoding["labels"] = batch_encoding["input_ids"].copy()
-            batch_encoding["preview"] = source_text[:preview_length]
+            preview_text = source_text
+            if len(preview_text) > preview_length:
+                preview_text = preview_text[:preview_length] + ' [...]'
+            batch_encoding["preview"] = preview_text
         return batch_encoding
     return tokenize_data
 
 
-print('Loading wikipedia dataset...')
-wiki_ds: Dataset = load_dataset(
-    'zetavg/zh-tw-wikipedia')['train']    # type: ignore
-print('Processing wikipedia dataset...')
-wiki_ds = wiki_ds.shuffle()
-if single_dataset_rows_limit:
-    wiki_ds = wiki_ds.select(range(single_dataset_rows_limit))
-wiki_train_ds = wiki_ds.map(
-    get_tokenize_data_fn('markdown'),
-    remove_columns=list(wiki_ds.features.keys()),
-    desc="Tokenizing Wikipedia dataset",
-    batched=True,
-    batch_size=512,
-)
-wiki_train_ds = wiki_train_ds.filter(
-    lambda x: len(x["input_ids"]) > 0,
-    # batched=True
+def generate_translations_dataset(tokenizer, dataset_config, settings):
+    source_ds_name = settings.get('source_dataset')
+    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {config.config_file_path}."
+
+    lang_1_key = settings.get('lang_1_key')
+    assert lang_1_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_1_key'])} is missing in config {config.config_file_path}."
+    lang_2_key = settings.get('lang_2_key')
+    assert lang_2_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_2_key'])} is missing in config {config.config_file_path}."
+    templates = settings.get('templates')
+    assert templates, f"{dataset_config.get_config_level_str(['translations_settings', 'templates'])} is missing in config {config.config_file_path}."
+
+    rows_limit = settings.get('rows_limit')
+
+    print(f"Loading translations dataset '{source_ds_name}'...")
+    source_ds: Dataset = \
+        load_dataset(source_ds_name)['train']  # type: ignore
+
+    print('Processing translations dataset...')
+
+    if rows_limit:
+        print(f"Limiting to {rows_limit} rows.")
+        source_ds = source_ds.select(range(rows_limit))
+
+    def get_translations_text(batch):
+        output = {'text': []}
+
+        for lang_1_text, lang_2_text in zip(
+                batch[lang_1_key], batch[lang_2_key]):
+
+            for template in templates:
+                text = template.format(
+                    lang_1=lang_1_text,
+                    lang_2=lang_2_text,
+                )
+                output['text'].append(text.strip())
+
+        return output
+
+    ds = source_ds.map(
+        get_translations_text,
+        batched=True,
+        remove_columns=list(source_ds.features.keys()))
+
+    print('Tokenizing translations dataset...')
+
+    ds = ds.map(
+        get_tokenize_data_fn(
+            tokenizer=tokenizer,
+            dataset_column='text',
+            max_length=dataset_config.max_training_text_length,
+            preview_length=dataset_config.preview_length,
+        ),
+        remove_columns=['text'],
+        batched=True,
+        batch_size=512,
     )
 
+    print(f"Translations dataset ok. Has {len(ds)} items.")
+    print()
 
-print('Loading translations dataset...')
-trans_ds: Dataset = load_dataset(
-    'zetavg/coct-en-zh-tw-translations-twp-300k')['train']    # type: ignore
-print('Processing translations dataset...')
-trans_ds = trans_ds.shuffle()
-if single_dataset_rows_limit:
-    trans_ds = trans_ds.select(range(single_dataset_rows_limit))
-en_first = True
-def get_translations_text(data_point):
-    global en_first
-    if en_first:
-        text = f"English: {data_point['en']}\nChinese: {data_point['ch']}"
-    else:
-        text = f"Chinese: {data_point['ch']}\nEnglish: {data_point['en']}"
+    return ds
 
-    en_first = not en_first
-    return { 'text': text.strip() }
-trans_train_ds = trans_ds.map(get_translations_text).map(
-    get_tokenize_data_fn('text'),
-    remove_columns=list(trans_ds.features.keys()) + ['text'],
-    desc="Tokenizing translations dataset",
-    batched=True,
-    batch_size=512,
-)
-trans_train_ds = trans_train_ds.filter(
-    lambda x: len(x["input_ids"]) > 0,
-    # batched=True
-    )
 
-print('Generating merged dataset...')
-train_ds = concatenate_datasets([wiki_train_ds, trans_train_ds]).shuffle()
-
-print('Saving dataset...')
-train_ds.save_to_disk(os.path.join(datasets_path, dataset_name))
-
-print('Pushing dataset to HF Hub...')
-train_ds.push_to_hub(dataset_name, private=True)
+if __name__ == "__main__":
+    fire.Fire(prepare_dataset)

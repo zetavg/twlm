@@ -1,0 +1,6 @@
+echo "Switching GCP config..."
+# Use `gcloud config configurations create llm-training` to create,
+# or `gcloud config configurations list` to list available configs.
+# Use `gcloud config configurations activate llm-training && gcloud auth login`
+# to login, and `gcloud config set project <project_name>` to set the project.
+gcloud config configurations activate llm-training
