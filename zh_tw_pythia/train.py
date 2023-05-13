@@ -291,11 +291,11 @@ def main(
         This model is a part of the `{config.project_name}` project.
         """).strip()
         if early_abort:
-            model_card_content += '\n'
+            model_card_content += '\n\n'
             model_card_content += dedent(f"""
             **Training has been early aborted at `epoch` `{early_abort.get('epoch')}`, `global_step` `{early_abort.get('global_step')}`.**
             """).strip()
-        model_card_content += '\n'
+        model_card_content += '\n\n'
         model_card_content += dedent(f"""
         * Base model: `{base_on_model_name_or_path}`
         * Tokenizer: `{tokenizer_name}`
