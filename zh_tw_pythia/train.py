@@ -400,20 +400,30 @@ class TrainerWithOutputLogging(Trainer):
                     # is in a batch, get thee first one
                     token_ids = token_ids[0]
 
+                limit = 1024
                 labels = inputs['labels'][0]
-                labels_to_decode = labels[:1024]
-                labels_to_decode = labels_to_decode[labels_to_decode > 0]
+                labels_to_decode = labels[:limit]
                 labels_to_decode = labels_to_decode.tolist()
                 token_ids_to_decode = token_ids[:len(labels_to_decode)]
 
+                while labels_to_decode and labels_to_decode[-1] == -100:
+                    labels_to_decode.pop()
+                    token_ids_to_decode.pop()
+
+                if labels_to_decode[0] == -100:
+                    while labels_to_decode and labels_to_decode[1] == -100:
+                        labels_to_decode.pop(0)
+                        token_ids_to_decode.pop(0)
+
                 label_tokens: List[str] = [
-                    tokenizer.decode([i])
+                    tokenizer.decode([i]) if i >= 0 else ''
                     for i in labels_to_decode]
                 output_tokens: List[str] = [
                     tokenizer.decode([i])
                     for i in token_ids_to_decode]
                 output_tokens = output_tokens
 
+                # Will be in WandB logs anyway.
                 # self.log({  # type: ignore
                 #     'output_tokens': output_tokens,
                 #     'label_tokens': label_tokens,

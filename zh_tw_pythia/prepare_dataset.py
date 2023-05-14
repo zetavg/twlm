@@ -231,6 +231,7 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
 
     rows_limit = settings.get('rows_limit')
     template = settings.get('template')
+    train_on_inputs = settings.get('train_on_inputs')
 
     print(f"Loading alpaca dataset '{source_ds_name}'...")
     source_ds: Dataset = \
@@ -243,14 +244,14 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
         source_ds = source_ds.select(range(rows_limit))
 
     def get_alpaca_text(batch):
-        batch_output = {'text': []}
+        batch_output = {'prompt': [], 'completion': []}
 
         for instruction, input, output in zip(
                 batch['instruction'], batch['input'], batch['output']):
 
             if template == 'short':
                 if input:
-                    text = dedent(f"""
+                    prompt = dedent(f"""
                         ### Instruction:
                         {instruction}
 
@@ -258,19 +259,17 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
                         {input}
 
                         ### Response:
-                        {output}
                     """).strip()
                 else:
-                    text = dedent(f"""
+                    prompt = dedent(f"""
                         ### Instruction:
                         {instruction}
 
                         ### Response:
-                        {output}
                     """).strip()
             else:
                 if input:
-                    text = dedent(f"""
+                    prompt = dedent(f"""
                         Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
 
                         ### Instruction:
@@ -280,19 +279,19 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
                         {input}
 
                         ### Response:
-                        {output}
                     """).strip()
                 else:
-                    text = dedent(f"""
+                    prompt = dedent(f"""
                         Below is an instruction that describes a task. Write a response that appropriately completes the request.
 
                         ### Instruction:
                         {instruction}
 
                         ### Response:
-                        {output}
                     """).strip()
-            batch_output['text'].append(text.strip())
+            completion = output
+            batch_output['prompt'].append(prompt.strip() + '\n')
+            batch_output['completion'].append(completion.strip())
         return batch_output
 
     ds = source_ds.map(
@@ -302,16 +301,49 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
 
     print('Tokenizing alpaca dataset...')
 
-    ds = ds.map(
-        get_tokenize_data_fn(
-            tokenizer=tokenizer,
-            dataset_column='text',
+    def tokenize(text, add_eos_token=True):
+        result = tokenizer(
+            text,
             max_length=dataset_config.max_tokens_length,
-            preview_length=dataset_config.preview_length,
-        ),
-        remove_columns=['text'],
-        batched=True,
-        batch_size=512,
+            truncation=True,
+            padding=False,  # Handled by DataCollatorForSeq2Seq.
+            return_tensors=None  # Handled by the trainer.
+        )
+        if (
+            add_eos_token
+            and result["input_ids"][-1] != tokenizer.eos_token_id
+            and len(result["input_ids"]) < dataset_config.max_tokens_length
+        ):
+            result["input_ids"].append(tokenizer.eos_token_id)
+            result["attention_mask"].append(1)
+        return result
+
+    def tokenize_data(data_point):
+        text = data_point['prompt'] + data_point['completion']
+        result = tokenize(text)
+
+        if train_on_inputs:
+            result["labels"] = result["input_ids"].copy()
+        else:
+            tokenized_prompt = tokenize(data_point['prompt'], add_eos_token=False)
+            prompt_len = len(tokenized_prompt["input_ids"])
+
+            labels = [-100] * prompt_len
+            labels += result["input_ids"][prompt_len:]
+
+            result["labels"] = labels
+
+        preview_length = dataset_config.preview_length
+        preview_text = text
+        if len(preview_text) > preview_length:
+            preview_text = preview_text[:preview_length] + ' [...]'
+        result["preview"] = preview_text
+
+        return result
+
+    ds = ds.map(
+        tokenize_data,
+        remove_columns=['prompt', 'completion'],
     )
 
     print(f"Alpaca dataset ok. Has {len(ds)} items.")
