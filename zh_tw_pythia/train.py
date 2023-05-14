@@ -118,7 +118,8 @@ def main(
             'config': config._config,
         }, allow_val_change=True)
         wandb.config.update({
-            'base_model': base_on_model_name_or_path,
+            'base_model': base_model_name,
+            'base_on_model': base_on_model_name,
             'tokenizer': tokenizer_name,
             'train': training_config.config_name,
             'dataset': dataset_name,
