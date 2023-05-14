@@ -123,6 +123,7 @@ def main(
             'tokenizer': tokenizer_name,
             'train': training_config.config_name,
             'dataset': dataset_name,
+            'output_model_name': model_name,
         })
         print()
 

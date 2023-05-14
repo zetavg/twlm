@@ -104,6 +104,7 @@ if [ "$skip_setup" == "true" ]; then
     --env TRAIN_NAME="$train_name"
 
 else
+  sleep 8
   sky launch sky_training.yaml \
     --env WANDB_API_KEY="$(awk -v machine="api.wandb.ai" 'BEGIN {RS="\n"; FS="\n"} $1 == "machine " machine {getline; while ($0 != "" && $0 !~ /^machine/) {if ($0 ~ /^ *password/) {sub(/^ *password */, "", $0); print $0; exit}; getline}}' ~/.netrc)" \
     --env HUGGING_FACE_HUB_TOKEN="$(cat ~/.cache/huggingface/token | tr -d '\n')" \
