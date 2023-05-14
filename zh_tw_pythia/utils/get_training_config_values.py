@@ -1,20 +1,6 @@
 from typing import TypedDict, Dict
 
 from termcolor import colored
-from peft import (
-    LoraConfig,
-)
-
-# ReturnValue = TypedDict(
-#     'ReturnValue',
-#     {
-#         'model_name': str,
-#         'base_model_name': str,
-#         'tokenizer_name': str,
-#         'train_name': str,
-#         'dataset_name': str,
-#     }
-# )
 
 
 def get_training_config_values(
