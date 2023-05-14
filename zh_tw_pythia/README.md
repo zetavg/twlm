@@ -60,3 +60,9 @@ training:
 使用 `./sky_train.sh` 與 `python train.py` 相同，可以使用 `--cfg` 來指定要使用的 config（但不支援 `--config_file_path`）。
 
 除此之外，`./sky_train.sh` 還可以使用 `--cluster_name <name>` 或是 `-n <name>` 來指定要使用的 SkyPilot cluster (等同 `sky launch` 的 `-c`)，以及使用 `--skip_setup` 或 `-s` 來跳過雲端機器的 setup (若使用了 `--skip_setup`，背後將會使用 `sky exec` 而非 `sky launch`)。
+
+
+## 其他工具
+
+* 訓練前初步檢查 config 內容：`python train_check_config.py --cfg=... <train_name>`。
+* 比較兩份 config 的差異：`python diff_configs.py config_1 config_2`。
