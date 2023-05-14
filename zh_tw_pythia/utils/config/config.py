@@ -65,16 +65,21 @@ class Config(ConfigBase):
         tokenizer_name = self._get_value(
             'tokenizer_name', str, allow_none=True)
         if tokenizer_name:
+            if len(tokenizer_name) > 80:
+                raise ValueError('tokenizer_name must be less than 80 chars.')
             return tokenizer_name
 
         t_config = self.tokenizer_config
-        generated_name = f"{self.project_name}-{self.group_name}"
+        generated_name = f"{self.project_name}"
         generated_name += f"-tokenizer-a{hs_number(t_config.tokens_to_add)}"
         generated_name += f"-{self.tokenizer_config.settings_hash[:6]}"
-        return self._get_cached(
+        n = self._get_cached(
             'tokenizer_name',
             lambda: generated_name
         )
+        if len(n) > 80:
+            raise ValueError(f"Auto generated tokenizer_name is too long, it must be less than 80 chars. ('{n}')")
+        return n
 
     @property
     def tokenizer_config(self) -> TokenizerConfig:

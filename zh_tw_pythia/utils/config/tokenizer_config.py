@@ -2,6 +2,7 @@ import json
 import hashlib
 
 from .config_base import ConfigBase
+from ..data_processing import deep_sort_dict
 
 
 class TokenizerConfig(ConfigBase):
@@ -28,7 +29,4 @@ class TokenizerConfig(ConfigBase):
     @property
     def settings_hash(self) -> str:
         settings = self.settings
-        sorted_items = sorted(settings.items(), key=lambda x: x[0])
-        sorted_tuple = tuple(sorted_items)
-        sorted_json = json.dumps(sorted_tuple, sort_keys=True).encode('utf-8')
-        return hashlib.sha256(sorted_json).hexdigest()
+        return self.get_hash(settings)

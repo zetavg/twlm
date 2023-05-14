@@ -62,13 +62,13 @@ def main(
 
     training_config = config.get_training_config(train_name)
 
-    model_name, base_model_name, tokenizer_name, dataset_name, peft_type = map(
+    model_name, base_model_name, tokenizer_name, base_on_model_name, dataset_name, peft_type = map(
         get_training_config_values(config, training_config).get,
-        ('model_name', 'base_model_name', 'tokenizer_name', 'dataset_name', 'peft_type'))
+        ('model_name', 'base_model_name', 'tokenizer_name', 'base_on_model_name', 'dataset_name', 'peft_type'))
 
     model_output_path = paths.get_model_path(model_name)
 
-    base_on_model_name_or_path: str = base_model_name  # type: ignore
+    base_on_model_name_or_path: str = base_on_model_name  # type: ignore
     possible_model_path = paths.get_model_path(base_on_model_name_or_path)
     if os.path.isdir(possible_model_path):
         base_on_model_name_or_path = possible_model_path
@@ -78,7 +78,7 @@ def main(
 
     print(f"Starting train '{training_config.run_name}'...")
     print()
-    print(colored("Base model:", 'cyan'), base_on_model_name_or_path)
+    print(colored("Base on model:", 'cyan'), base_on_model_name_or_path)
     print(colored("Tokenizer:", 'cyan'), tokenizer_name)
     print()
     if peft_type:
@@ -91,9 +91,11 @@ def main(
     print()
 
     run_tags = [
-        f"base_model:{base_on_model_name_or_path}"[:64],
-        f"tokenizer:{tokenizer_name}"[:64],
+        f"group:{config.group_name}"[:64],
         f"train:{training_config.config_name}"[:64],
+        f"bm:{base_model_name}"[:64],
+        f"bom:{base_on_model_name}"[:64],
+        f"tokenizer:{tokenizer_name}"[:64],
         f"ds:{dataset_name}"[:64],
     ]
 

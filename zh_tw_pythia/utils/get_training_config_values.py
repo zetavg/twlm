@@ -25,25 +25,22 @@ def get_training_config_values(
     train_name = training_config.config_name
     dataset_name = training_config.dataset_name
 
-    base_on = training_config.base_on
-    if base_on:
-        if base_on.get('model'):
-            base_model_name = base_on['model']
-        elif base_on.get('output_of'):
-            based_t_cfg = config.get_training_config(base_on['output_of'])
-            base_model_name = based_t_cfg.model_name
-        else:
-            raise ValueError(f"'{base_on}' is not a valid 'base_on' value.")
+    base_on_model_name = training_config.base_on_model_name
 
     peft_type = training_config.use_peft
 
     if print_values:
         print()
+        print(colored("Run name:", 'cyan'), training_config.run_name)
         print(colored("Output model name:", 'cyan'), model_name)
         print()
         print(colored("Base model:", 'cyan'), base_model_name)
         print(colored("Tokenizer:", 'cyan'), tokenizer_name)
         print()
+
+        if base_on_model_name != base_model_name:
+            print(colored("Base on model:", 'cyan'), base_on_model_name)
+            print()
 
         if peft_type:
             print(colored("PEFT method:", 'cyan'), peft_type)
@@ -57,6 +54,7 @@ def get_training_config_values(
         'model_name': model_name,
         'base_model_name': base_model_name,
         'tokenizer_name': tokenizer_name,
+        'base_on_model_name': base_on_model_name,
         'train_name': train_name,
         'dataset_name': dataset_name,
         'peft_type': peft_type,

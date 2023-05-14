@@ -2,9 +2,11 @@ from typing import Any, Union, List, Callable
 
 import os
 import json
+import hashlib
 
 from ..data_processing import (
     shallow_diff_list,
+    deep_sort_dict,
 )
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -69,3 +71,10 @@ class ConfigBase:
 
     def to_json(self, indent=None):
         return json.dumps(self._config, indent=indent, ensure_ascii=False)
+
+    def get_hash(self, value=None):
+        if not value:
+            value = self._config
+        sorted_value = deep_sort_dict(value)
+        json_value = json.dumps(sorted_value, ensure_ascii=False).encode('utf-8')
+        return hashlib.sha256(json_value).hexdigest()

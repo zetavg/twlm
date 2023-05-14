@@ -42,16 +42,21 @@ class TrainingDatasetConfig(ConfigBase):
             project_and_group_name = f"{project_name}-{group_name}"
             tokenizer_name = root_config.tokenizer_name
             tokenizer_name = tokenizer_name.replace('-tokenizer-a', '-ta')
+            tokenizer_name = \
+                remove_common_substring(tokenizer_name, project_and_group_name)
+            tokenizer_name = tokenizer_name.strip('-_')
 
-            generated_name = f"{project_name}-{group_name}-{tokenizer_name}"
-            if tokenizer_name.startswith(project_and_group_name):
-                generated_name = tokenizer_name
+            generated_name = f"{project_and_group_name}-{tokenizer_name}"
+
             generated_name += f"-{self.parent_config.config_name}"
 
             generated_name += f"-{self.get_build_with_short_str()}"
             generated_name += f"-{self.get_settings_hash()[:6]}"
 
             generated_name += f"-c{self.max_tokens_length}"
+
+            if len(generated_name) > 80:
+                raise ValueError(f"Auto generated dataset_name is too long, it must be less than 80 chars. ('{generated_name}')")
 
             return generated_name
 
@@ -134,6 +139,23 @@ class TrainingConfig(ConfigBase):
         return value
 
     @property
+    def base_on_model_name(self) -> str:
+        assert self.parent_config, "parent_config is not passed"
+        model_name = self.parent_config.base_model_name
+
+        base_on = self.base_on
+        if base_on:
+            if base_on.get('model'):
+                model_name = base_on['model']
+            elif base_on.get('output_of'):
+                based_t_cfg = self.parent_config.get_training_config(base_on['output_of'])
+                model_name = based_t_cfg.model_name
+            else:
+                raise ValueError(f"'{base_on}' is not a valid 'base_on' value.")
+
+        return model_name
+
+    @property
     def max_tokens_length(self) -> int:
         return self._get_value('max_tokens_length', int)
 
@@ -179,30 +201,38 @@ class TrainingConfig(ConfigBase):
 
             root_config = self.parent_config
 
-            project_name = root_config.project_name
+            # project_name = root_config.project_name
             group_name = root_config.group_name
-            project_and_group_name = f"{project_name}-{group_name}"
+            # project_and_group_name = f"{project_name}-{group_name}"
 
             base_model_name = root_config.base_model_name
             base_model_name = re.sub(r'^[^/]+/', '', base_model_name)
+            base_model_name = \
+                remove_common_substring(base_model_name, group_name)
+            base_model_name = base_model_name.strip('-_')
 
             tokenizer_name = root_config.tokenizer_name
             tokenizer_name = tokenizer_name.replace('-tokenizer-a', '-ta')
             tokenizer_name = \
-                remove_common_substring(tokenizer_name, project_and_group_name)
+                remove_common_substring(tokenizer_name, group_name)
             tokenizer_name = \
                 remove_common_substring(tokenizer_name, base_model_name)
             tokenizer_name = tokenizer_name.strip('-_')
 
             train_name = self.config_name
-            run_suffix = self._get_value('run_suffix', str, allow_none=True)
+            run_name_suffix = \
+                (self._get_value('run_name_suffix', str, allow_none=True) or
+                 self._get_value('run_suffix', str, allow_none=True))
 
-            generated_name = f"{base_model_name}-{tokenizer_name}-{train_name}"
-            if run_suffix:
-                generated_name += f"-{run_suffix}"
-            generated_name += f"-{self.hash[:4]}"
+            generated_name = f"{group_name}-{train_name}-{tokenizer_name}-{base_model_name}"
+            if run_name_suffix:
+                generated_name += f"-{run_name_suffix}"
+            generated_name += f"-{self.hash[:6]}"
 
             generated_name = generated_name.strip('-_')
+
+            if len(generated_name) > 80:
+                raise ValueError(f"Auto generated run_name is too long, it must be less than 80 chars. ('{generated_name}')")
 
             return generated_name
 
@@ -222,13 +252,38 @@ class TrainingConfig(ConfigBase):
             root_config = self.parent_config
 
             project_name = root_config.project_name
-            run_name = self.run_name
-            run_name = \
-                remove_common_substring(run_name, project_name)
-            run_name = run_name.strip('-_')
+            group_name = root_config.group_name
+            project_and_group_name = f"{project_name}-{group_name}"
 
-            generated_name = f"{project_name}-{run_name}"
+            base_model_name = root_config.base_model_name
+            base_model_name = re.sub(r'^[^/]+/', '', base_model_name)
+            base_model_name = \
+                remove_common_substring(
+                    base_model_name, project_and_group_name)
+            base_model_name = base_model_name.strip('-_')
+
+            tokenizer_name = root_config.tokenizer_name
+            tokenizer_name = tokenizer_name.replace('-tokenizer-a', '-ta')
+            tokenizer_name = \
+                remove_common_substring(tokenizer_name, project_and_group_name)
+            tokenizer_name = \
+                remove_common_substring(tokenizer_name, base_model_name)
+            tokenizer_name = tokenizer_name.strip('-_')
+
+            train_name = self.config_name
+            run_name_suffix = \
+                (self._get_value('run_name_suffix', str, allow_none=True) or
+                 self._get_value('run_suffix', str, allow_none=True))
+
+            generated_name = f"{project_and_group_name}-{base_model_name}-{tokenizer_name}-{train_name}"
+            if run_name_suffix:
+                generated_name += f"-{run_name_suffix}"
+            generated_name += f"-{self.hash[:6]}"
+
             generated_name = generated_name.strip('-_')
+
+            if len(generated_name) > 80:
+                raise ValueError(f"Auto generated model_name is too long, it must be less than 80 chars. ('{generated_name}')")
 
             return generated_name
 
@@ -273,14 +328,20 @@ class TrainingConfig(ConfigBase):
 
     @property
     def hash(self) -> str:
-        config = self._config.copy()
+        config = {
+            k: v
+            for k, v in self._config.items()
+            if k != 'base_on'
+            and k != 'dataset'
+            and k != 'run_name_suffix'
+        }
+        config['dataset'] = self.dataset_name
+        config['base_on_model_name'] = self.base_on_model_name
         if config.get('training_arguments'):
             config['training_arguments'] = {
                 k: v
                 for k, v in config['training_arguments'].items()
                 if k not in self.training_argument_keys_allow_updating
             }
-        sorted_items = sorted(config.items(), key=lambda x: x[0])
-        sorted_tuple = tuple(sorted_items)
-        sorted_json = json.dumps(sorted_tuple, sort_keys=True).encode('utf-8')
-        return hashlib.sha256(sorted_json).hexdigest()
+        # print(json.dumps(config, indent=2))
+        return self.get_hash(config)
