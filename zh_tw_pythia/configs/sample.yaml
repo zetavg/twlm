@@ -170,10 +170,10 @@ training:
     # A suffix to append to the run name. This is useful for distinguishing
     # like different hardware setups or hyperparameters used.
     # Note that this will not be used if 'run_name' is explicitly specified.
-    run_suffix: 'dev-05'
+    run_name_suffix: 'dev-05'
 
     # Name of the run. If not specified, one will be automatically
-    # generated from the parameters used, and append with the 'run_suffix'.
+    # generated from the parameters used, and append with the 'run_name_suffix'.
     # run_name: ''
 
     # Name of the output model. If not specified, one will be automatically
@@ -247,7 +247,7 @@ training:
     # A suffix to append to the run name. This is useful for distinguishing
     # like different hardware setups or hyperparameters used.
     # Note that this will not be used if 'run_name' is explicitly specified.
-    run_suffix: 'dev-05'
+    run_name_suffix: 'dev-05'
 
     # To train with PEFT (Parameter-Efficient Fine-Tuning), specify a method.
     use_peft: lora
