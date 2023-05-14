@@ -15,9 +15,9 @@ class TrainingDatasetConfig(ConfigBase):
     ''' Config for train dataset. '''
 
     @property
-    def max_training_text_length(self) -> int:
+    def max_tokens_length(self) -> int:
         assert self.parent_config, "parent_config is not passed"
-        return self.parent_config.max_training_text_length
+        return self.parent_config.max_tokens_length
 
     @property
     def preview_length(self) -> int:
@@ -51,7 +51,7 @@ class TrainingDatasetConfig(ConfigBase):
             generated_name += f"-{self.get_build_with_short_str()}"
             generated_name += f"-{self.get_settings_hash()[:6]}"
 
-            generated_name += f"-c{self.max_training_text_length}"
+            generated_name += f"-c{self.max_tokens_length}"
 
             return generated_name
 
@@ -85,6 +85,8 @@ class TrainingDatasetConfig(ConfigBase):
     def get_short_name(self, name) -> str:
         if name == 'translations':
             return 'tr'
+        elif name == 'alpaca':
+            return 'alp'
         return ''
 
     def get_settings_hash_of(self, name) -> str:
@@ -111,6 +113,10 @@ class TrainingConfig(ConfigBase):
     ''' Config for training. '''
 
     @property
+    def use_peft(self) -> Union[str, None]:
+        return self._get_value('use_peft', str, allow_none=True)
+
+    @property
     def base_on(self) -> Union[dict, None]:
         value = self._get_value('base_on', dict,
                                 allow_none=True,
@@ -128,8 +134,8 @@ class TrainingConfig(ConfigBase):
         return value
 
     @property
-    def max_training_text_length(self) -> int:
-        return self._get_value('max_training_text_length', int)
+    def max_tokens_length(self) -> int:
+        return self._get_value('max_tokens_length', int)
 
     @property
     def dataset_config(self) -> TrainingDatasetConfig:
@@ -138,6 +144,16 @@ class TrainingConfig(ConfigBase):
             if not dataset_config:
                 raise ValueError(
                     f"Missing training dataset config {'.'.join(self.config_level)}.dataset in {self.config_file_path}.")
+
+            if dataset_config.get('same_as'):
+                assert self.parent_config, "parent_config is not passed"
+                root_config = self.parent_config
+
+                t_config = root_config.get_training_config(
+                    dataset_config.get('same_as'))
+
+                return t_config.dataset_config
+
             return TrainingDatasetConfig(
                 dataset_config,
                 config_file_path=self.config_file_path,

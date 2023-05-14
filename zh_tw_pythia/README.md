@@ -8,7 +8,7 @@ An attempt to train a Pythia model to understand and speak fluent Taiwan Traditi
 2. Prepare Dataset - 準備訓練資料集 (`python prepare_dataset.py <train_name>`)。
 3. Train Model - 訓練模型 (`python train.py <train_name>`)。
 
-每個步驟的參數細節都由 config 檔決定，詳細請參考 `configs/default.yaml` 的內容。
+每個步驟的參數細節都由 config 檔決定，詳細請參考 `configs/sample.yaml` 的內容。
 
 Train 可以定義多個，每個可以使用不同的訓練資料、超參數，以及可訓練的參數。例如，可以在 config 檔中這寫：
 

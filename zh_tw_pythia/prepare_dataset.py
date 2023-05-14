@@ -50,7 +50,7 @@ def prepare_dataset(
     message += f"Preparing dataset '{dataset_config.dataset_name}' "
     message += f"using tokenizer '{config.tokenizer_name}' "
     message += f"with '{dataset_config.build_with}' "
-    message += f", max_training_text_length={dataset_config.max_training_text_length} "
+    message += f", max_tokens_length={dataset_config.max_tokens_length} "
     message += "..."
     print(message)
     print()
@@ -66,7 +66,7 @@ def prepare_dataset(
                 dataset_config.get_settings_for(build_type))
             datasets.append(ds)
 
-        if build_type == 'alpaca':
+        elif build_type == 'alpaca':
             ds = generate_alpaca_dataset(
                 tokenizer, dataset_config,
                 dataset_config.get_settings_for(build_type))
@@ -114,7 +114,7 @@ def prepare_dataset(
         * Tokenizer: `{config.tokenizer_name}`
         * Built with: {', '.join(f"`{s}`" for s in dataset_config.build_with)}
         * Rows: `{len(dataset)}`
-        * Max length: `{dataset_config.max_training_text_length}`
+        * Max length: `{dataset_config.max_tokens_length}`
         * Full config:
           ```json
           {dataset_config.to_json()}
@@ -211,7 +211,7 @@ def generate_translations_dataset(tokenizer, dataset_config, settings):
         get_tokenize_data_fn(
             tokenizer=tokenizer,
             dataset_column='text',
-            max_length=dataset_config.max_training_text_length,
+            max_length=dataset_config.max_tokens_length,
             preview_length=dataset_config.preview_length,
         ),
         remove_columns=['text'],
@@ -306,7 +306,7 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
         get_tokenize_data_fn(
             tokenizer=tokenizer,
             dataset_column='text',
-            max_length=dataset_config.max_training_text_length,
+            max_length=dataset_config.max_tokens_length,
             preview_length=dataset_config.preview_length,
         ),
         remove_columns=['text'],
