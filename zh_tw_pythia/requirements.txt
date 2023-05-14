@@ -3,6 +3,7 @@ torch
 pyyaml
 accelerate
 transformers==4.28.1
+peft==0.2.0
 datasets==2.12.0
 huggingface_hub
 wandb

@@ -11,6 +11,13 @@ from transformers import (
     TrainingArguments, Trainer, DataCollatorForSeq2Seq,
     TrainerCallback
 )
+from peft import (
+    LoraConfig,
+    get_peft_model,
+    get_peft_model_state_dict,
+    prepare_model_for_int8_training,
+    set_peft_model_state_dict,
+)
 from tokenizers import Tokenizer as TokenizerFast
 from datasets import Dataset, load_dataset, concatenate_datasets
 from huggingface_hub import HfFileSystem
@@ -55,9 +62,9 @@ def main(
 
     training_config = config.get_training_config(train_name)
 
-    model_name, base_model_name, tokenizer_name, dataset_name = map(
+    model_name, base_model_name, tokenizer_name, dataset_name, peft_type = map(
         get_training_config_values(config, training_config).get,
-        ('model_name', 'base_model_name', 'tokenizer_name', 'dataset_name'))
+        ('model_name', 'base_model_name', 'tokenizer_name', 'dataset_name', 'peft_type'))
 
     model_output_path = paths.get_model_path(model_name)
 
@@ -73,8 +80,13 @@ def main(
     print()
     print(colored("Base model:", 'cyan'), base_on_model_name_or_path)
     print(colored("Tokenizer:", 'cyan'), tokenizer_name)
+    print()
+    if peft_type:
+        print(colored("PEFT method:", 'cyan'), model_output_path)
+        print()
     print(colored("Train:", 'cyan'), training_config.config_name)
     print(colored("Dataset:", 'cyan'), dataset_name)
+    print()
     print(colored("Output path:", 'cyan'), model_output_path)
     print()
 
@@ -168,6 +180,15 @@ def main(
                 'trainable_params': trainable_params_list,
                 'frozen_params': frozen_params_list,
             })
+
+    if peft_type:
+        print("Creating PEFT model...")
+        print()
+        if peft_type == 'lora':
+            peft_config = LoraConfig(**training_config._config['lora_config'])
+            model = get_peft_model(model, peft_config)
+        else:
+            raise ValueError(f"Unknown PEFT method: {peft_type}.")
 
     trainable_params_count = 0
     all_params_count = 0

@@ -40,7 +40,7 @@ class ConfigBase:
         allowed_keys: Union[None, List[str]] = None,
     ) -> Any:
         val = self._config.get(key)
-        if not val:
+        if val is None:
             if not allow_none:
                 k_path = '.'.join(self.config_level + [key])
                 raise ValueError(

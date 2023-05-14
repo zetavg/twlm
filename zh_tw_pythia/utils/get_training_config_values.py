@@ -1,6 +1,9 @@
 from typing import TypedDict, Dict
 
 from termcolor import colored
+from peft import (
+    LoraConfig,
+)
 
 # ReturnValue = TypedDict(
 #     'ReturnValue',
@@ -32,6 +35,8 @@ def get_training_config_values(
         else:
             raise ValueError(f"'{base_on}' is not a valid 'base_on' value.")
 
+    peft_type = training_config.use_peft
+
     if print_values:
         print()
         print(colored("Output model name:", 'cyan'), model_name)
@@ -39,6 +44,11 @@ def get_training_config_values(
         print(colored("Base model:", 'cyan'), base_model_name)
         print(colored("Tokenizer:", 'cyan'), tokenizer_name)
         print()
+
+        if peft_type:
+            print(colored("PEFT method:", 'cyan'), peft_type)
+            print()
+
         print(colored("Train:", 'cyan'), train_name)
         print(colored("Dataset:", 'cyan'), dataset_name)
         print()
@@ -49,4 +59,5 @@ def get_training_config_values(
         'tokenizer_name': tokenizer_name,
         'train_name': train_name,
         'dataset_name': dataset_name,
+        'peft_type': peft_type,
     }

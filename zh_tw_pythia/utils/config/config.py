@@ -32,6 +32,7 @@ class Config(ConfigBase):
         self._config = config
         self.config_file_path = config_file_path
         self._generated_values = {}
+        self.config_level = []
 
         tokenizer_config = self._get_value('tokenizer', dict)
         self._tokenizer_config = TokenizerConfig(
@@ -108,7 +109,7 @@ class Config(ConfigBase):
 
     @property
     def push_outputs_to_hf(self) -> bool:
-        return self._get_value('push_outputs_to_hf', bool)
+        return self._get_value('push_outputs_to_hf', bool, allow_none=True)
 
     @property
     def report_to_wandb(self) -> bool:

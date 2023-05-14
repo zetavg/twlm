@@ -265,8 +265,8 @@ training:
     # See: https://huggingface.co/docs/peft/main/en/package_reference/tuners#peft.LoraConfig
     lora_config:
       task_type: CAUSAL_LM
-      r: 16
-      lora_alpha: 32
+      r: 128
+      lora_alpha: 64
       lora_dropout: 0.05
       target_modules:
         - 'embed'
