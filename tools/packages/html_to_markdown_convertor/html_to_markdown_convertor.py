@@ -192,6 +192,20 @@ class MdConverter(MarkdownConverter):
     convert_kbd = convert_code
 
     def convert_pre(self, el, text, convert_as_inline):
+        code_language = ''
+        hljs_el = el.find('code', class_='hljs')
+
+        if hljs_el:
+            text = hljs_el.text
+            if hljs_el.attrs and hljs_el.attrs.get('class'):
+                classes = hljs_el.attrs.get('class')
+                if isinstance(classes, list):
+                    for c in hljs_el.attrs.get('class'):
+                        match = re.match(r'^language-(.+)$', c)
+                        if match:
+                            code_language = match.group(1)
+                            break
+
         if not text:
             return ''
 
@@ -199,8 +213,6 @@ class MdConverter(MarkdownConverter):
             text = text[1:]
         if text.endswith('\n'):
             text = text[:-1]
-
-        code_language = ''
 
         if self.options['code_language_callback']:
             code_language = self.options['code_language_callback'](el) or code_language

@@ -474,6 +474,141 @@ class TestHTMLToMarkdownConvert(unittest.TestCase):
             """)
         )
 
+    def test_chatgpt_cases(self):
+        self.assertEqual(
+            convert_html_to_markdown('<div class="markdown prose w-full break-words dark:prose-invert dark"><p>非常好的想法！以下是修改後的「來彰化跑步」活動結束後媒體招待會的流程表，希望可以讓媒體朋友們有更美好的體驗：</p><table><thead><tr><th>時間</th><th>流程</th><th>負責人</th></tr></thead><tbody><tr><td>14:00</td><td>媒體招待會開始，歡迎詞</td><td>主持人</td></tr><tr><td>14:10</td><td>活動成果報告</td><td>活動負責人</td></tr><tr><td>14:30</td><td>影片放映</td><td>影片製作人</td></tr><tr><td>14:40</td><td>與參與者對談</td><td>活動負責人</td></tr><tr><td>15:00</td><td>優質體驗分享</td><td>參與者代表</td></tr><tr><td>15:20</td><td>抽獎活動</td><td>主持人</td></tr><tr><td>15:40</td><td>自由交流時間</td><td>全體參與人員</td></tr><tr><td>16:00</td><td>活動結束</td><td>主持人</td></tr></tbody></table><p>備註：</p><ol><li>活動成果報告內容包括活動的規模、參與人數、重點活動內容等。</li><li>影片放映包括活動當天的精彩片段及花絮等。</li><li>與參與者對談讓媒體朋友可以更深入的了解參與者的活動經驗及感受，並且可以更貼近實際活動情況的進行採訪。</li><li>優質體驗分享可以邀請參與者代表分享他們參與活動的體驗及心得，讓媒體朋友可以透過參與者的分享更貼近活動。</li><li>抽獎活動包括抽取本次活動的參與者及媒體代表參與，獎品可設計為與跑步相關的商品或紀念品。</li><li>自由交流時間讓參與人員有機會互相交流活動的經驗及意見，也可讓媒體代表進一步採訪活動相關內容。</li></ol></div>'),
+            dedent("""
+            非常好的想法！以下是修改後的「來彰化跑步」活動結束後媒體招待會的流程表，希望可以讓媒體朋友們有更美好的體驗：
+
+            | 時間 | 流程 | 負責人 |
+            | --- | --- | --- |
+            | 14:00 | 媒體招待會開始，歡迎詞 | 主持人 |
+            | 14:10 | 活動成果報告 | 活動負責人 |
+            | 14:30 | 影片放映 | 影片製作人 |
+            | 14:40 | 與參與者對談 | 活動負責人 |
+            | 15:00 | 優質體驗分享 | 參與者代表 |
+            | 15:20 | 抽獎活動 | 主持人 |
+            | 15:40 | 自由交流時間 | 全體參與人員 |
+            | 16:00 | 活動結束 | 主持人 |
+
+            備註：
+
+            1. 活動成果報告內容包括活動的規模、參與人數、重點活動內容等。
+            2. 影片放映包括活動當天的精彩片段及花絮等。
+            3. 與參與者對談讓媒體朋友可以更深入的了解參與者的活動經驗及感受，並且可以更貼近實際活動情況的進行採訪。
+            4. 優質體驗分享可以邀請參與者代表分享他們參與活動的體驗及心得，讓媒體朋友可以透過參與者的分享更貼近活動。
+            5. 抽獎活動包括抽取本次活動的參與者及媒體代表參與，獎品可設計為與跑步相關的商品或紀念品。
+            6. 自由交流時間讓參與人員有機會互相交流活動的經驗及意見，也可讓媒體代表進一步採訪活動相關內容。
+            """)
+        )
+
+        self.assertEqual(
+            convert_html_to_markdown('<div><p>PyTorch 可以用於數據預測的各種場景，例如圖像分類、物體檢測、語音識別、自然語言處理等。以下是使用 PyTorch 進行數據預測的一般步驟：</p><ol><li><p>準備數據集：根據您的預測任務，從公共數據庫或您自己的數據中收集和準備數據集。通常，數據集需要被分為訓練集、驗證集和測試集。</p></li><li><p>構建模型：選擇一個適合您預測任務的模型，例如卷積神經網絡（CNN）用於圖像分類，循環神經網絡（RNN）用於語音識別或自然語言處理等。使用 PyTorch 定義模型的結構和參數。</p></li><li><p>訓練模型：使用訓練集來訓練模型，通過最小化損失函數來調整模型的參數。通常，訓練過程中會使用隨機梯度下降（SGD）或其他優化算法進行模型優化。</p></li><li><p>驗證模型：使用驗證集來評估模型的性能，檢查模型是否出現過擬合現象，並進行超參數的調整。</p></li><li><p>測試模型：使用測試集來測試模型的性能，並報告模型的準確率或其他性能指標。</p></li></ol><p>以下是使用 PyTorch 進行圖像分類的一個簡單例子：</p><pre><div class="bg-black rounded-md mb-4"><div class="flex items-center relative text-gray-200 bg-gray-800 px-4 py-2 text-xs font-sans"><span>python</span><svg stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"></svg>Copy code</div><div><code class="!whitespace-pre hljs language-python"><span class="hljs-keyword">import</span> torch\n<span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn\n<span class="hljs-keyword">import</span> torchvision.datasets <span class="hljs-keyword">as</span> datasets\n<span class="hljs-keyword">import</span> torchvision.transforms <span class="hljs-keyword">as</span> transforms\n\n<span class="hljs-comment"># 載入訓練集和測試集</span>\ntrain_set = datasets.MNIST(root=<span class="hljs-string">\'./data\'</span>, train=<span class="hljs-literal">True</span>, download=<span class="hljs-literal">True</span>, transform=transforms.ToTensor())\ntest_set = datasets.MNIST(root=<span class="hljs-string">\'./data\'</span>, train=<span class="hljs-literal">False</span>, download=<span class="hljs-literal">True</span>, transform=transforms.ToTensor())\n\n<span class="hljs-comment"># 定義模型</span>\n<span class="hljs-keyword">class</span> <span class="hljs-title class_">Net</span>(nn.Module):\n    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self</span>):\n        <span class="hljs-built_in">super</span>(Net, self).__init__()\n        self.conv1 = nn.Conv2d(<span class="hljs-number">1</span>, <span class="hljs-number">10</span>, kernel_size=<span class="hljs-number">5</span>)\n        self.conv2 = nn.Conv2d(<span class="hljs-number">10</span>, <span class="hljs-number">20</span>, kernel_size=<span class="hljs-number">5</span>)\n        self.fc1 = nn.Linear(<span class="hljs-number">320</span>, <span class="hljs-number">50</span>)\n        self.fc2 = nn.Linear(<span class="hljs-number">50</span>, <span class="hljs-number">10</span>)\n\n    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>):\n        x = nn.functional.relu(nn.functional.max_pool2d(self.conv1(x), <span class="hljs-number">2</span>))\n</code></div></div></pre></div>'),
+            dedent("""
+            PyTorch 可以用於數據預測的各種場景，例如圖像分類、物體檢測、語音識別、自然語言處理等。以下是使用 PyTorch 進行數據預測的一般步驟：
+
+            1. 準備數據集：根據您的預測任務，從公共數據庫或您自己的數據中收集和準備數據集。通常，數據集需要被分為訓練集、驗證集和測試集。
+            2. 構建模型：選擇一個適合您預測任務的模型，例如卷積神經網絡（CNN）用於圖像分類，循環神經網絡（RNN）用於語音識別或自然語言處理等。使用 PyTorch 定義模型的結構和參數。
+            3. 訓練模型：使用訓練集來訓練模型，通過最小化損失函數來調整模型的參數。通常，訓練過程中會使用隨機梯度下降（SGD）或其他優化算法進行模型優化。
+            4. 驗證模型：使用驗證集來評估模型的性能，檢查模型是否出現過擬合現象，並進行超參數的調整。
+            5. 測試模型：使用測試集來測試模型的性能，並報告模型的準確率或其他性能指標。
+
+            以下是使用 PyTorch 進行圖像分類的一個簡單例子：
+
+            ```python
+            import torch
+            import torch.nn as nn
+            import torchvision.datasets as datasets
+            import torchvision.transforms as transforms
+
+            # 載入訓練集和測試集
+            train_set = datasets.MNIST(root=\'./data\', train=True, download=True, transform=transforms.ToTensor())
+            test_set = datasets.MNIST(root=\'./data\', train=False, download=True, transform=transforms.ToTensor())
+
+            # 定義模型
+            class Net(nn.Module):
+                def __init__(self):
+                    super(Net, self).__init__()
+                    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+                    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+                    self.fc1 = nn.Linear(320, 50)
+                    self.fc2 = nn.Linear(50, 10)
+
+                def forward(self, x):
+                    x = nn.functional.relu(nn.functional.max_pool2d(self.conv1(x), 2))
+            ```
+            """)
+        )
+
+        self.assertEqual(
+            convert_html_to_markdown('<div class="markdown prose w-full break-words dark:prose-invert light"><p>To sort the divs based on the selected option in the dropdown menu, you can use JavaScript. One way to achieve this is to add an event listener to the dropdown menu that listens for changes to the selected option, and then sorts the divs accordingly.</p><p>Here is an example implementation using vanilla JavaScript:</p><pre><div class="bg-black mb-4 rounded-md"><div class="flex items-center relative text-gray-200 bg-gray-800 px-4 py-2 text-xs font-sans"><span class="">scss</span><button class="flex ml-auto gap-2"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>Copy code</button></div><div class="p-4 overflow-y-auto"><code class="!whitespace-pre hljs language-scss">const sortMenu = document<span class="hljs-selector-class">.getElementById</span>("sortMenu");\nconst things = document<span class="hljs-selector-class">.getElementById</span>("things");\n\nsortMenu<span class="hljs-selector-class">.addEventListener</span>("change", function() {\n  const sortType = this<span class="hljs-selector-class">.value</span>;\n  <span class="hljs-built_in">sortCards</span>(sortType);\n});\n\nfunction <span class="hljs-built_in">sortCards</span>(sortType) {\n  const cards = <span class="hljs-selector-attr">[...things.children]</span>;\n  if (sortType === "date-asc") {\n    cards<span class="hljs-selector-class">.sort</span>(sortByDateAsc);\n  } else if (sortType === "date-des") {\n    cards<span class="hljs-selector-class">.sort</span>(sortByDateDes);\n  } else if (sortType === "title-asc") {\n    cards<span class="hljs-selector-class">.sort</span>(sortByTitleAsc);\n  } else if (sortType === "title-des") {\n    cards<span class="hljs-selector-class">.sort</span>(sortByTitleDes);\n  }\n\n  things<span class="hljs-selector-class">.innerHTML</span> = "";\n  for (const card of cards) {\n    things<span class="hljs-selector-class">.appendChild</span>(card);\n  }\n}\n\nfunction <span class="hljs-built_in">sortByDateAsc</span>(a, b) {\n  const dateA = new <span class="hljs-built_in">Date</span>(getCardFooter(a)<span class="hljs-selector-class">.textContent</span><span class="hljs-selector-class">.split</span>("Updated: ")<span class="hljs-selector-attr">[1]</span>);\n  const dateB = new <span class="hljs-built_in">Date</span>(getCardFooter(b)<span class="hljs-selector-class">.textContent</span><span class="hljs-selector-class">.split</span>("Updated: ")<span class="hljs-selector-attr">[1]</span>);\n  return dateA - dateB;\n}\n\nfunction <span class="hljs-built_in">sortByDateDes</span>(a, b) {\n  const dateA = new <span class="hljs-built_in">Date</span>(getCardFooter(a)<span class="hljs-selector-class">.textContent</span><span class="hljs-selector-class">.split</span>("Updated: ")<span class="hljs-selector-attr">[1]</span>);\n  const dateB = new <span class="hljs-built_in">Date</span>(getCardFooter(b)<span class="hljs-selector-class">.textContent</span><span class="hljs-selector-class">.split</span>("Updated: ")<span class="hljs-selector-attr">[1]</span>);\n  return dateB - dateA;\n}\n\nfunction <span class="hljs-built_in">sortByTitleAsc</span>(a, b) {\n  const titleA = <span class="hljs-built_in">getCardTitle</span>(a)<span class="hljs-selector-class">.textContent</span>;\n  const titleB = <span class="hljs-built_in">getCardTitle</span>(b)<span class="hljs-selector-class">.textContent</span>;\n  return titleA<span class="hljs-selector-class">.localeCompare</span>(titleB);\n}\n\nfunction <span class="hljs-built_in">sortByTitleDes</span>(a, b) {\n  const titleA = <span class="hljs-built_in">getCardTitle</span>(a)<span class="hljs-selector-class">.textContent</span>;\n  const titleB = <span class="hljs-built_in">getCardTitle</span>(b)<span class="hljs-selector-class">.textContent</span>;\n  return titleB<span class="hljs-selector-class">.localeCompare</span>(titleA);\n}\n\nfunction <span class="hljs-built_in">getCardFooter</span>(card) {\n  return card<span class="hljs-selector-class">.querySelector</span>(".card-footer");\n}\n\nfunction <span class="hljs-built_in">getCardTitle</span>(card) {\n  return card<span class="hljs-selector-class">.querySelector</span>(".card-title");\n}\n</code></div></div></pre></div>'),
+            dedent("""
+                To sort the divs based on the selected option in the dropdown menu, you can use JavaScript. One way to achieve this is to add an event listener to the dropdown menu that listens for changes to the selected option, and then sorts the divs accordingly.
+
+                Here is an example implementation using vanilla JavaScript:
+
+                ```scss
+                const sortMenu = document.getElementById("sortMenu");
+                const things = document.getElementById("things");
+
+                sortMenu.addEventListener("change", function() {
+                  const sortType = this.value;
+                  sortCards(sortType);
+                });
+
+                function sortCards(sortType) {
+                  const cards = [...things.children];
+                  if (sortType === "date-asc") {
+                    cards.sort(sortByDateAsc);
+                  } else if (sortType === "date-des") {
+                    cards.sort(sortByDateDes);
+                  } else if (sortType === "title-asc") {
+                    cards.sort(sortByTitleAsc);
+                  } else if (sortType === "title-des") {
+                    cards.sort(sortByTitleDes);
+                  }
+
+                  things.innerHTML = "";
+                  for (const card of cards) {
+                    things.appendChild(card);
+                  }
+                }
+
+                function sortByDateAsc(a, b) {
+                  const dateA = new Date(getCardFooter(a).textContent.split("Updated: ")[1]);
+                  const dateB = new Date(getCardFooter(b).textContent.split("Updated: ")[1]);
+                  return dateA - dateB;
+                }
+
+                function sortByDateDes(a, b) {
+                  const dateA = new Date(getCardFooter(a).textContent.split("Updated: ")[1]);
+                  const dateB = new Date(getCardFooter(b).textContent.split("Updated: ")[1]);
+                  return dateB - dateA;
+                }
+
+                function sortByTitleAsc(a, b) {
+                  const titleA = getCardTitle(a).textContent;
+                  const titleB = getCardTitle(b).textContent;
+                  return titleA.localeCompare(titleB);
+                }
+
+                function sortByTitleDes(a, b) {
+                  const titleA = getCardTitle(a).textContent;
+                  const titleB = getCardTitle(b).textContent;
+                  return titleB.localeCompare(titleA);
+                }
+
+                function getCardFooter(card) {
+                  return card.querySelector(".card-footer");
+                }
+
+                function getCardTitle(card) {
+                  return card.querySelector(".card-title");
+                }
+                ```
+            """)
+        )
+
 
 def dedent(str):
     return textwrap.dedent(str).strip()
