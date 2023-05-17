@@ -252,7 +252,9 @@ def main(
         callbacks=[TrainerControlCallback],  # type: ignore
     )
     trainer._output_logging_tokenizer = tokenizer  # type: ignore
-    trainer.log_output_every_n_steps = training_args.logging_steps * 20  # type: ignore
+    trainer.log_output_every_n_steps = \
+        training_config._config.get('log_output_every_n_steps') \
+        or (training_args.logging_steps * 20)  # type: ignore
 
     if resume_from_checkpoint:
         if isinstance(resume_from_checkpoint, str):
@@ -432,7 +434,21 @@ class TrainerWithOutputLogging(Trainer):
                 #     'labels': labels.tolist()
                 # })
                 print(colored(
-                    '------------',
+                    '----------------',
+                    'dark_grey',
+                ))
+                input_preview = inputs['input_ids'][0].tolist()
+                input_preview_truncated = False
+                while input_preview and input_preview[-1] <= 1:
+                    input_preview.pop()
+                if len(input_preview) > 80:
+                    input_preview = input_preview[:80]
+                    input_preview_truncated = True
+                text = tokenizer.decode(input_preview).replace('\n', '\\n')
+                text += ' [...]' if input_preview_truncated else ''
+                print('"' + text + '"')
+                print(colored(
+                    '----------------',
                     'dark_grey',
                 ))
                 print(comparing_lists(
@@ -447,7 +463,7 @@ class TrainerWithOutputLogging(Trainer):
                     add_blank_line=False,
                 ))
                 print(colored(
-                    '------------',
+                    '----------------',
                     'dark_grey',
                 ))
             except Exception as e:

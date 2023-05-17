@@ -268,6 +268,9 @@ training:
       save_steps: 100
       save_total_limit: 1
 
+    # Optional, controls the frequency of model output logging.
+    log_output_every_n_steps: 10
+
   # Define another training with the name called 'with_peft'.
   with_peft:
     # A suffix to append to the run name. This is useful for distinguishing
