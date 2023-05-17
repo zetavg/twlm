@@ -142,7 +142,10 @@ def main(
 
     dataset = load_dataset(config, paths, dataset_name)
     train_dataset = dataset['train']
+    test_dataset = dataset.get('test', [])
     print(f"Train dataset contains {len(train_dataset)} rows.")
+    if test_dataset:
+        print(f"Test dataset contains {len(test_dataset)} rows.")
     print()
 
     print(f"Loading base model '{base_on_model_name_or_path}'...")
@@ -248,12 +251,18 @@ def main(
     )
 
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
-    training_args = TrainingArguments(
-        output_dir=model_output_path,
-        overwrite_output_dir=True,
-        report_to=['wandb'] if use_wandb else None,
-        **training_config.training_arguments
-    )
+    training_args = TrainingArguments(**{
+        'output_dir': model_output_path,
+        'overwrite_output_dir': True,
+        'report_to': ['wandb'] if use_wandb else None,
+        'evaluation_strategy': 'steps' if len(test_dataset) > 0 else 'no',
+        **training_config.training_arguments,
+        'eval_steps': (
+            training_config.training_arguments.get('eval_steps') or
+            training_config.training_arguments.get('save_steps') or
+            10
+        ) if len(test_dataset) > 0 else None,
+    })
 
     if use_wandb:
         training_args_dict = training_args.to_dict()
@@ -275,6 +284,7 @@ def main(
         model=model,
         tokenizer=tokenizer,
         train_dataset=train_dataset,  # type: ignore
+        eval_dataset=test_dataset,  # type: ignore
         data_collator=data_collator,
         args=training_args,
         callbacks=[TrainerControlCallback],  # type: ignore

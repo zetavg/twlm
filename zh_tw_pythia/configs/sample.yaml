@@ -214,19 +214,35 @@ training:
           - "English: {lang_1}\nChinese: {lang_2}"
           - "Chinese: {lang_2}\nEnglish: {lang_1}"
         rows_limit: 100  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 0.1
+        test_split_seed: 42
+        test_rows_limit: 10  # Only works if test_size is set
 
       # Settings for `build_with` `wikipedia`.
       wikipedia_settings:
-        source_dataset: 'zetavg/zh-tw-wikipedia'
+        # source_dataset: 'zetavg/zh-tw-wikipedia'
+        # Use a dev dataset that contains only 1000 items
+        source_dataset: 'zetavg/zh-tw-wikipedia-dev'
         exclude:
           - content_length_longer_than: 512
           - match: '小行星'
             in: 'markdown'
             in_range: [0, 40]
+          - match: '，是中國'
+            in: 'markdown'
+            in_range: [0, 20]
+          - match: '中華人民共和國'
+            in: 'markdown'
+            in_range: [0, 20]
           - match: '是中華人民共和國'
             in: 'markdown'
-            in_range: [0, 80]
+            in_range: [0, 40]
         rows_limit: 100  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 0.1
+        test_split_seed: 42
+        test_rows_limit: 10  # Only works if test_size is set
 
       # Settings for `build_with` `sharegpt`.
       sharegpt_settings:
@@ -234,9 +250,13 @@ training:
         # The alpaca template to use. Supported values: `null` (default), `short`.
         train_on_inputs: false
         languages:
-          - en: 50  # Limit the number of rows to use
+          - en: 0.4  # Limit the number of rows to use, int (> 1) means excect number while float (0 < n < 1) means percentage, float can only be used if rows_limit and test_rows_limit is used.
           - zh_Hant  # No limit
         rows_limit: 100  # Limit the total number of rows to use
+        # Optional, for test split
+        test_size: 0.1
+        test_split_seed: 42
+        test_rows_limit: 10  # Only works if test_size is set
 
       # Settings for `build_with` `alpaca`.
       alpaca_settings:
@@ -245,6 +265,10 @@ training:
         template: short
         train_on_inputs: false
         rows_limit: 100  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 0.1
+        test_split_seed: 42
+        test_rows_limit: 10  # Only works if test_size is set
 
     # Only train parameters which with name matches with one of the listed
     # regexp. If not specified, all parameters will be trained.
@@ -265,11 +289,12 @@ training:
       warmup_steps: 100
       # Steps & save
       logging_steps: 10
+      eval_steps: 50
       save_steps: 100
       save_total_limit: 1
 
     # Optional, controls the frequency of model output logging.
-    log_output_every_n_steps: 20
+    # log_output_every_n_steps: 20
 
   # Define another training with the name called 'with_peft'.
   with_peft:
@@ -316,6 +341,7 @@ training:
       warmup_steps: 100
       # Steps & save
       logging_steps: 10
+      eval_steps: 50
       save_steps: 100
       save_total_limit: 1
 

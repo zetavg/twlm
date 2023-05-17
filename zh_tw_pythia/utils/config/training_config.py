@@ -106,10 +106,7 @@ class TrainingDatasetConfig(ConfigBase):
                 source_dataset, str), "source_dataset must be str"
             return hashlib.sha256(source_dataset.encode('utf-8')).hexdigest()
 
-        sorted_items = sorted(settings.items(), key=lambda x: x[0])
-        sorted_tuple = tuple(sorted_items)
-        sorted_json = json.dumps(sorted_tuple, sort_keys=True).encode('utf-8')
-        return hashlib.sha256(sorted_json).hexdigest()
+        return self.get_hash(settings)
 
     def get_settings_hash(self) -> str:
         all_hash = ''
@@ -338,6 +335,7 @@ class TrainingConfig(ConfigBase):
             if k != 'base_on'
             and k != 'dataset'
             and k != 'run_name_suffix'
+            and k != 'log_output_every_n_steps'
         }
         config['dataset'] = self.dataset_name
         config['base_on_model_name'] = self.base_on_model_name

@@ -6,7 +6,7 @@ import fire
 import json
 from transformers import AutoTokenizer
 from tokenizers import Tokenizer as TokenizerFast
-from datasets import Dataset, load_dataset, concatenate_datasets
+from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets
 from huggingface_hub import HfFileSystem
 from tqdm import tqdm
 from termcolor import colored
@@ -58,35 +58,58 @@ def prepare_dataset(
     tokenizer = load_tokenizer(config, paths)
 
     datasets = []
+    test_datasets = []
 
     for build_type in dataset_config.build_with:
+        settings = dataset_config.get_settings_for(build_type)
+        source_ds_name = settings.get('source_dataset')
+        rows_limit = settings.get('rows_limit')
+        test_size = settings.get('test_size')
+        test_split_seed = settings.get('test_split_seed')
+        test_rows_limit = settings.get('test_rows_limit')
+        print(f"Loading source dataset '{source_ds_name}'...")
+        source_ds: Dataset = \
+            load_dataset(source_ds_name)['train']  # type: ignore
+        print(f"Source dataset contains {len(source_ds)} rows.")
+        test_ds = None
+        if test_size:
+            print('Splitting dataset into train and test sets...')
+            ds_dict = source_ds.train_test_split(
+                test_size=test_size,
+                shuffle=False,
+                seed=test_split_seed,
+            )
+            source_ds = ds_dict['train']
+            test_ds = ds_dict['test']
+            print(
+                f"Train set has {len(source_ds)} rows, test set has {len(test_ds)} rows.")
         if build_type == 'translations':
-            ds = generate_translations_dataset(
-                tokenizer, dataset_config,
-                dataset_config.get_settings_for(build_type))
-            datasets.append(ds)
+            generate_dataset_fn = generate_translations_dataset
 
         elif build_type == 'wikipedia':
-            ds = generate_wikipedia_dataset(
-                tokenizer, dataset_config,
-                dataset_config.get_settings_for(build_type))
-            datasets.append(ds)
+            generate_dataset_fn = generate_wikipedia_dataset
 
         elif build_type == 'sharegpt':
-            ds = generate_sharegpt_dataset(
-                tokenizer, dataset_config,
-                dataset_config.get_settings_for(build_type))
-            datasets.append(ds)
+            generate_dataset_fn = generate_sharegpt_dataset
 
         elif build_type == 'alpaca':
-            ds = generate_alpaca_dataset(
-                tokenizer, dataset_config,
-                dataset_config.get_settings_for(build_type))
-            datasets.append(ds)
+            generate_dataset_fn = generate_alpaca_dataset
 
         else:
             raise Exception(
                 f"Unknown dataset build method '{build_type}'. Check {dataset_config.config_file_path}")
+
+        ds = generate_dataset_fn(
+            tokenizer, dataset_config, settings,
+            source_ds, rows_limit)
+        datasets.append(ds)
+        if test_ds:
+            print("Preparing test set...")
+            t_ds = generate_dataset_fn(
+                tokenizer, dataset_config, settings,
+                test_ds, test_rows_limit, type_='test')
+            test_datasets.append(t_ds)
+        print()
 
     print("Preparing final dataset...")
     dataset = concatenate_datasets(datasets)
@@ -99,6 +122,23 @@ def prepare_dataset(
         attrs=['bold']
     ))
     print()
+
+    test_dataset = None
+    if test_datasets:
+        print("Preparing final test dataset...")
+        test_dataset = concatenate_datasets(test_datasets)
+        print(f"Concatenated test dataset contains {len(test_dataset)} rows.")
+
+        test_dataset = test_dataset.filter(lambda x: x['input_ids'])
+        print(colored(
+            f"Final test dataset contains {len(test_dataset)} rows.",
+            attrs=['bold']
+        ))
+        print()
+        dataset = DatasetDict({
+            'train': dataset,
+            'test': test_dataset,
+        })
 
     if not do_not_save:
         print('Saving dataset...')
@@ -118,6 +158,8 @@ def prepare_dataset(
 
         print("Updating dataset card...")
         dataset_card_frontmatter = {}
+        rows_info = f"`train` `{len(dataset['train'])}`, `test` `{len(dataset['test'])}`" if isinstance(
+            dataset, DatasetDict) else f"`{len(dataset)}`"
         dataset_card_content = dedent(f"""
         # {dataset_config.dataset_name}
 
@@ -125,7 +167,7 @@ def prepare_dataset(
 
         * Tokenizer: `{config.tokenizer_name}`
         * Built with: {', '.join(f"`{s}`" for s in dataset_config.build_with)}
-        * Rows: `{len(dataset)}`
+        * Rows: {rows_info}
         * Max length: `{dataset_config.max_tokens_length}`
         * Full config:
           ```json
@@ -174,10 +216,7 @@ def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
     return tokenize_data
 
 
-def generate_translations_dataset(tokenizer, dataset_config, settings):
-    source_ds_name = settings.get('source_dataset')
-    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
-
+def generate_translations_dataset(tokenizer, dataset_config, settings, source_ds, rows_limit, type_='train'):
     lang_1_key = settings.get('lang_1_key')
     assert lang_1_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_1_key'])} is missing in config {dataset_config.config_file_path}."
     lang_2_key = settings.get('lang_2_key')
@@ -185,13 +224,10 @@ def generate_translations_dataset(tokenizer, dataset_config, settings):
     templates = settings.get('templates')
     assert templates, f"{dataset_config.get_config_level_str(['translations_settings', 'templates'])} is missing in config {dataset_config.config_file_path}."
 
-    rows_limit = settings.get('rows_limit')
-
-    print(f"Loading translations dataset '{source_ds_name}'...")
-    source_ds: Dataset = \
-        load_dataset(source_ds_name)['train']  # type: ignore
-
     print('Processing translations dataset...')
+
+    if type_ != 'test':
+        source_ds = source_ds.shuffle()
 
     if rows_limit:
         print(f"Limiting to {rows_limit} rows.")
@@ -231,25 +267,21 @@ def generate_translations_dataset(tokenizer, dataset_config, settings):
         batch_size=512,
     )
 
-    print(f"Translations dataset ok. Has {len(ds)} items.")
-    print()
+    print(colored(
+        f"Translations {type_} dataset ok. Has {len(ds)} rows.",
+        attrs=['bold']
+    ))
 
     return ds
 
 
-def generate_wikipedia_dataset(tokenizer, dataset_config, settings):
-    source_ds_name = settings.get('source_dataset')
-    assert source_ds_name, f"{dataset_config.get_config_level_str(['wikipedia_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
-
-    rows_limit = settings.get('rows_limit')
+def generate_wikipedia_dataset(tokenizer, dataset_config, settings, source_ds, rows_limit, type_='train'):
     exclude = settings.get('exclude')
 
-    print(f"Loading wikipedia dataset '{source_ds_name}'...")
-    source_ds: Dataset = \
-        load_dataset(source_ds_name)['train']  # type: ignore
-    print(f"Dataset has {len(source_ds)} rows.")
-
     print('Processing wikipedia dataset...')
+
+    if type_ != 'test':
+        source_ds = source_ds.shuffle()
 
     if exclude:
         print(f"Filtering out rows with {len(exclude)} exclusion rules...")
@@ -274,6 +306,11 @@ def generate_wikipedia_dataset(tokenizer, dataset_config, settings):
         print(f"Limiting to {rows_limit} rows.")
         source_ds = source_ds.select(range(rows_limit))
 
+    print(
+        'Sample titles:',
+        [d.get('title') or d.get('original_title')
+         for d in source_ds.select(range(min(100, len(source_ds))))])
+
     print('Tokenizing wikipedia dataset...')
 
     ds = source_ds.map(
@@ -288,27 +325,38 @@ def generate_wikipedia_dataset(tokenizer, dataset_config, settings):
         batch_size=512,
     )
 
-    print(f"Wikipedia dataset ok. Has {len(ds)} items.")
-    print()
+    print(colored(
+        f"Wikipedia {type_} dataset ok. Has {len(ds)} rows.",
+        attrs=['bold']
+    ))
 
     return ds
 
 
-def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
-    source_ds_name = settings.get('source_dataset')
-    assert source_ds_name, f"{dataset_config.get_config_level_str(['sharepgt_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
-
-    rows_limit = settings.get('rows_limit')
+def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, rows_limit, type_='train'):
     languages = settings.get('languages')
     train_on_inputs = settings.get('train_on_inputs')
 
-    print(f"Loading ShareGPT dataset '{source_ds_name}'...")
-    source_ds: Dataset = \
-        load_dataset(source_ds_name)['train']  # type: ignore
-
     print('Processing ShareGPT dataset...')
 
-    source_ds = source_ds.shuffle()
+    unknown_from_values = []
+
+    def has_gpt(row):
+        for c in row['conversations']:
+            if c['from'] == 'gpt' or c['from'] == 'chatgpt':
+                return True
+            elif c['from'] != 'human' and c['from'] != 'user':
+                if c['from'] not in unknown_from_values:
+                    unknown_from_values.append(c['from'])
+        return False
+
+    source_ds = source_ds.filter(has_gpt)
+    if unknown_from_values:
+        print(f"Unknown 'from' values: {unknown_from_values}")
+
+    if type_ != 'test':
+        source_ds = source_ds.shuffle()
+
     if not rows_limit or rows_limit > len(source_ds):
         rows_limit = len(source_ds)
     lang_limits = {}
@@ -316,6 +364,8 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
         lang_limits = {
             list(lang.keys())[0]: list(lang.values())[0]  # type: ignore
             for lang in languages if isinstance(lang, dict)}
+        lang_limits = {k: v if v >= 1 else int(
+            rows_limit * v) for k, v in lang_limits.items()}
     lang_counts = {}
     languages = [
         la if isinstance(la, str) else list(la.keys())[0]
@@ -344,7 +394,6 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
             progress_bar.update(1)
 
     ds: Dataset = Dataset.from_generator(data_generator)  # type: ignore
-    print(f"Dataset has {len(ds)} rows after filtered.")
     print("Languages:", json.dumps(lang_counts, indent=2))
 
     print('Tokenizing ShareGPT dataset...')
@@ -360,7 +409,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
         return result
 
     def tokenize_message(text, f) -> Any:
-        if f == 'human':
+        if f == 'human' or f == 'user':
             result_1 = tokenize('### Human:\n')
             result_2 = tokenize(f"{text}\n\n")
             output = {
@@ -378,7 +427,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
 
             return output
 
-        elif f == 'gpt':
+        elif f == 'gpt' or f == 'chatgpt':
             output = tokenize(f"### AI:\n{text}\n\n")
             output['labels'] = output['input_ids'].copy()
             return output
@@ -406,7 +455,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
             if (len(output['input_ids']) + len(result['input_ids']) + len(ending_result['input_ids'])) > dataset_config.max_tokens_length:
                 break
 
-            if c['from'] == 'human':
+            if c['from'] == 'human' or c['from'] == 'user':
                 last_is_input = True
             else:
                 last_is_input = False
@@ -426,7 +475,8 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
             output['labels'] = output['labels'][:dataset_config.max_tokens_length]
 
         preview_length = dataset_config.preview_length
-        preview_text = f"[{data_point['id']}] " + tokenizer.decode(output['input_ids'])
+        preview_text = f"[{data_point['id']}] " + \
+            tokenizer.decode(output['input_ids'])
         if len(preview_text) > preview_length:
             preview_text = preview_text[:preview_length] + ' [...]'
         output["preview"] = preview_text
@@ -438,25 +488,22 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings):
         remove_columns=list(source_ds.features.keys())
     )
 
-    print(f"ShareGPT dataset ok. Has {len(ds)} rows.")
-    print()
+    print(colored(
+        f"ShareGPT {type_} dataset ok. Has {len(ds)} rows.",
+        attrs=['bold']
+    ))
 
     return ds
 
 
-def generate_alpaca_dataset(tokenizer, dataset_config, settings):
-    source_ds_name = settings.get('source_dataset')
-    assert source_ds_name, f"{dataset_config.get_config_level_str(['translations_settings', 'source_dataset'])} is missing in config {dataset_config.config_file_path}."
-
-    rows_limit = settings.get('rows_limit')
+def generate_alpaca_dataset(tokenizer, dataset_config, settings, source_ds, rows_limit, type_='train'):
     template = settings.get('template')
     train_on_inputs = settings.get('train_on_inputs')
 
-    print(f"Loading alpaca dataset '{source_ds_name}'...")
-    source_ds: Dataset = \
-        load_dataset(source_ds_name)['train']  # type: ignore
-
     print('Processing alpaca dataset...')
+
+    if type_ != 'test':
+        source_ds = source_ds.shuffle()
 
     if rows_limit:
         print(f"Limiting to {rows_limit} rows.")
@@ -566,8 +613,10 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings):
         remove_columns=['prompt', 'completion'],
     )
 
-    print(f"Alpaca dataset ok. Has {len(ds)} items.")
-    print()
+    print(colored(
+        f"Alpaca {type_} dataset ok. Has {len(ds)} rows.",
+        attrs=['bold']
+    ))
 
     return ds
 

@@ -50,12 +50,14 @@ from utils.update_hf_readme import update_hf_readme
 
 def preview_dataset(
     train_name: str,
+    split: str = 'train',
     range_: str = '0,100',
+    only_preview: bool = False,
     cfg: Union[str, None] = None,
     config_file_path: Union[str, None] = None,
     data_dir_path: Union[str, None] = None,
 ):
-    r = range_.split(',')
+    r = range_.split(',') if isinstance(range_, str) else range_
     start = int(r[0])
     end = int(r[1])
 
@@ -73,11 +75,14 @@ def preview_dataset(
     tokenizer = load_tokenizer(config, paths)
 
     dataset = load_dataset(config, paths, dataset_name)
-    dataset = dataset['train'].select(range(start, end))
+    dataset = dataset[split].select(range(start, end))
 
     for i, row in enumerate(dataset):
         preview = row['preview'].replace('\n', '\\n')
         print(f"Row {i}: '{preview}'")
+        if only_preview:
+            print()
+            continue
         print(comparing_lists(
             [
                 [tokenizer.decode([i]) for i in row['input_ids']],

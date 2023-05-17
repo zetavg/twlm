@@ -64,5 +64,6 @@ training:
 
 ## 其他工具
 
+* 預覽 dataset：`python preview_dataset.py --cfg=... <train_name> --split=test --range_=10,20` (參數基本與 `train.py` 相同，但多了 `--split`、`--range_` 以及 `--only_preview` 三個參數)。
 * 訓練前初步檢查 config 內容：`python train_check_config.py --cfg=... <train_name>`。
 * 比較兩份 config 的差異：`python diff_configs.py config_1 config_2`。
