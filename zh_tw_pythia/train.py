@@ -157,9 +157,37 @@ def main(
         model.get_output_embeddings().out_features != tokenizer.vocab_size
     ):
         print(f"Resizing model to match tokenizer vocab size...")
+
+        original_all_params_count = 0
+        for name, param in model.named_parameters():
+            original_all_params_count += param.numel()
+
+        original_input_embeddings_parameters_count = sum([
+            p[1].numel()
+            for p in model.get_input_embeddings().named_parameters()])
+        original_output_embeddings_parameters_count = sum([
+            p[1].numel()
+            for p in model.get_output_embeddings().named_parameters()])
+
         model.resize_token_embeddings(tokenizer.vocab_size)
+
+        new_all_params_count = 0
+        for name, param in model.named_parameters():
+            new_all_params_count += param.numel()
+
+        new_input_embeddings_parameters_count = sum([
+            p[1].numel()
+            for p in model.get_input_embeddings().named_parameters()])
+        new_output_embeddings_parameters_count = sum([
+            p[1].numel()
+            for p in model.get_output_embeddings().named_parameters()])
+
         print(
             f"New input_embeddings: {model.get_input_embeddings()}, output_embeddings: {model.get_output_embeddings()}.")
+        print(
+            f"Original input embeddings / output embeddings / all params count: {original_input_embeddings_parameters_count} / {original_output_embeddings_parameters_count} / {original_all_params_count}")
+        print(
+            f"New input embeddings / output embeddings / all params count: {new_input_embeddings_parameters_count} / {new_output_embeddings_parameters_count} / {new_all_params_count}")
         print()
 
     train_params = training_config.only_train_parameters_matching
