@@ -269,7 +269,7 @@ training:
       save_total_limit: 1
 
     # Optional, controls the frequency of model output logging.
-    log_output_every_n_steps: 10
+    log_output_every_n_steps: 20
 
   # Define another training with the name called 'with_peft'.
   with_peft:
