@@ -90,6 +90,10 @@ class TrainingDatasetConfig(ConfigBase):
     def get_short_name(self, name) -> str:
         if name == 'translations':
             return 'tr'
+        if name == 'wikipedia':
+            return 'wiki'
+        if name == 'sharegpt':
+            return 'sg'
         elif name == 'alpaca':
             return 'alp'
         return ''

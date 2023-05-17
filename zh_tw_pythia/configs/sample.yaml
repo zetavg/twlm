@@ -196,6 +196,8 @@ training:
       #  - `aplaca`: Alpaca-styled examples for instruction tuning.
       build_with:
         - translations
+        - wikipedia
+        - sharegpt
         - alpaca
 
       # A 'preview' column will be added to the dataset as non-encoded text
@@ -212,6 +214,29 @@ training:
           - "English: {lang_1}\nChinese: {lang_2}"
           - "Chinese: {lang_2}\nEnglish: {lang_1}"
         rows_limit: 100  # Limit the number of rows to use
+
+      # Settings for `build_with` `wikipedia`.
+      wikipedia_settings:
+        source_dataset: 'zetavg/zh-tw-wikipedia'
+        exclude:
+          - content_length_longer_than: 512
+          - match: '小行星'
+            in: 'markdown'
+            in_range: [0, 40]
+          - match: '是中華人民共和國'
+            in: 'markdown'
+            in_range: [0, 80]
+        rows_limit: 100  # Limit the number of rows to use
+
+      # Settings for `build_with` `sharegpt`.
+      sharegpt_settings:
+        source_dataset: 'zetavg/ShareGPT-Processed'
+        # The alpaca template to use. Supported values: `null` (default), `short`.
+        train_on_inputs: false
+        languages:
+          - en: 50  # Limit the number of rows to use
+          - zh_Hant  # No limit
+        rows_limit: 100  # Limit the total number of rows to use
 
       # Settings for `build_with` `alpaca`.
       alpaca_settings:
