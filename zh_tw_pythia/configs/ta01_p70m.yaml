@@ -1,30 +1,33 @@
-# Project and group name, used for logging and to name the outputs
-# (if those names arn't specified).
-project_name: 'zh-tw-pythia'
-group_name: 'te01'
+# ta01_p70m.yaml
+# Test for actual usage, based on pythia-70m.
+
+# Project and group name, used for logging and generating names for the outputs
+# (when output names are not specified).
+project_name: 'zh-tw-llm'
+group_name: 'ta01'
+
+# Hugging Face user or organization name.
+# This is used to save and load models and datasets from Hugging Face Hub.
+hf_user_or_org_name: 'zh-tw-llm-dv'
 
 # Base model and tokenizer name.
 base_tokenizer_name: 'EleutherAI/pythia-70m'
-base_model_name: 'EleutherAI/pythia-6.9b'
+base_model_name: 'EleutherAI/pythia-70m'
 
-# Name of the builded tokenizer. If not specified, it will be generated from the
-# project name, group name, and the parameter used.
-# The tokenizer_name is also used to load the tokenizer while preparing the
+# Name of the builded tokenizer. If not specified, a name will be
+# automatically generated based on the parameters used.
+# This will also be use to load the tokenizer while preparing the
 # dataset and training the model.
-tokenizer_name: 'zh-tw-pythia-tokenizer-a12k-te01'
+tokenizer_name: 'zh-tw-pythia-tokenizer-a8000-v1'
 
-# Hugging Face user or org name.
-# This is used to load the intermediate tokenizer or dataset from Hugging Face Hub.
-hf_user_or_org_name: 'zh-tw-llm-dv'
-
-# Tokenization
+# Configuration for building the tokenizer.
 tokenizer:
-  # How to build the tokenizer.
-  # - `word_frequency_list`: Insert new words from a word frequency list.
+  # How to build the tokenizer. Supported values:
+  #  - `word_frequency_list`: Insert new words from a word frequency list.
   build_with: word_frequency_list
 
-  # Limit how many tokens can be added.
-  tokens_to_add: 12000
+  # How many tokens to add.
+  tokens_to_add: 8000
 
   word_frequency_list_settings:
     # The word frequency list dataset from Hugging Face Hub.
@@ -84,32 +87,32 @@ tokenizer:
         except: ['委員會', '研究所', '中研院', '國科會', '資策會', '經建會', '工研院', '電信總局', '鎮公所', '事務所', '交易所', '農委會', '鄉公所', '地檢署', '警分局', '派出所', '托兒所', '消基會', '文建會', '兩廳院', '陸委會', '市議會']
       - match:
           pos: 'Na'
-          regex: '^(.{2,})人$'  # "外國人", "美國人", "領導人"
+          regex: '^(.{2,})人$'
         sub: '\1'
         except: ['年輕人', '負責人', '投資人', '候選人', '一家人', '當地人', '製作人']
       - match:
           pos: 'Na'
-          regex: '^(.{2,3})學?家$'  # "藝術家", "科學家", "考古學家"
+          regex: '^(.{2,3})學?家$'
         sub: '\1'
         except: ['女人家', '婦人家', '新儒家', '窮人家', '縱橫家', '老人家', '老東家', '闊人家', '大戶人家', '婦道人家', '小戶人家', '水上人家', '諸子百家']
       - match:
           pos: 'Na'
-          regex: '^副?總?([^副總]{2,})師$'  # "建築師", "設計師", "工程師", "總工程師"
+          regex: '^副?總?([^副總]{2,})師$'
         sub: '\1'
         except: ['中醫師', '囝仔師', '正機師', '準教師', '獸醫師', '班導師', '練馬師', '總舖師', '老像師', '新三十師', '至聖先師', '音樂大師']
       - match:
           pos: 'Na'
-          regex: '^[原前]?(?:代|代理)?副?總?([^前代副總議警里首院部署局廳司處科組課股]{2,})[院部署局廳司處科組課股]?次?長$'  # "行政院長", "教育部長"
+          regex: '^[原前]?(?:代|代理)?副?總?([^前代副總議警里首院部署局廳司處科組課股]{2,})[院部署局廳司處科組課股]?次?長$'
         sub: '\1'
         except: ['董事長', '理事長', '秘書長', '執行長', '分局長', '縣市長', '一技之長', '省市長', '負成長', '高成長', '大家長', '小組長', '區組長', '低成長', '偵一組長', '停管隊長', '考選部長', '年增長', '正成長', '支店長', '公賣局長', '中宣部長', '小市長']
       - match:
           pos: 'Na'
-          regex: '^副?總?正?([^副總正議委人隊]{2,})[委人隊]?員$'  # "研究員", "技術人員"
+          regex: '^副?總?正?([^副總正議委人隊]{2,})[委人隊]?員$'
         sub: '\1'
         except: ['主跑員', '乘務員', '佐理員', '共黨員', '外務員', '從業員', '特派員', '義服員', '銜道員', '啦啦隊員', '指服團員']
       - match:
           pos: 'Na'
-          regex: '^副(.{2,})$' # "副總經理", "副主席"
+          regex: '^副(.{2,})$'
         sub: '\1'
         except: ['副作用']
       - { match: '一剎那', replace: '剎那' }
@@ -155,29 +158,45 @@ tokenizer:
       - { match: '總幹事', replace: ['幹事', '總幹事'] }
       - { match: '兩廳院', replace: ['廳院', '兩廳院'] }
 
-# Training
-training:
-  embeddings:
-    # This will not be used if run_name is specified.
-    run_suffix: 'gcp-a100-trans-c-t1'
 
-    # Name of the run. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
+training:
+  a_1_embeddings:
+    run_name_suffix: 'a100-t4'
+
+    # Name of the run. If not specified, one will be automatically
+    # generated from the parameters used, and append with the 'run_name_suffix'.
     # run_name: ''
 
-    # Name of the output model. If not specified, it will be generated from the
-    # project name, group name, run name, and the parameter used.
-    model_name: 'zh-tw-pythia-6.9b-a12k-te01-embeddings'
+    # Name of the output model. If not specified, one will be automatically
+    # generated from the parameters used.
+    # model_name: ''
 
-    max_training_text_length: 2048
+    # The maximum length of tokens for one training input. Training samples
+    # exceeding this length will be truncated.
+    # This should not exceed the maximum input length of the base model.
+    max_tokens_length: 2048
 
-    # Name of the dataset. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
-    dataset_name: 'zh-tw-pythia-a12k-trans'
+    # Name of the intermediate dataset that will be generated and used for
+    # training. If not specified, one will be automatically generated.
+    dataset_name: 'zh-tw-pythia-ta8000-v1-e1-tr_sg-001'
 
+    # Settings for the training dataset.
     dataset:
-      build_with: translations
-      preview_length: 64
+      # How the dataset should be built. Supported values:
+      #  - `translations`: Translations between two languages.
+      #  - `aplaca`: Alpaca-styled examples for instruction tuning.
+      build_with:
+        - translations
+        # - wikipedia
+        - sharegpt
+        # - alpaca
+
+      # A 'preview' column will be added to the dataset as non-encoded text
+      # for the convenience to check what is contatined in a row of the dataset.
+      # This controls the maximum length of the preview.
+      preview_length: 128
+
+      # Settings for `build_with` `translations`.
       translations_settings:
         source_dataset: 'zetavg/coct-en-zh-tw-translations-twp-300k'
         lang_1_key: 'en'
@@ -185,143 +204,168 @@ training:
         templates:
           - "English: {lang_1}\nChinese: {lang_2}"
           - "Chinese: {lang_2}\nEnglish: {lang_1}"
-        # rows_limit: 100
+        rows_limit: 100000  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 100
+        test_split_seed: 42
+        # test_rows_limit: 100  # Only works if test_size is set
 
-    # Only train parameters which with name matches with one of the listed
-    # regexp. If not specified, all parameters will be trained.
+      # Settings for `build_with` `wikipedia`.
+      # wikipedia_settings:
+      #   source_dataset: 'zetavg/zh-tw-wikipedia'
+      #   exclude:
+      #     - content_length_longer_than: 1024
+      #     - match: '小行星'
+      #       in: 'markdown'
+      #       in_range: [0, 40]
+      #     - match: '，是中國'
+      #       in: 'markdown'
+      #       in_range: [0, 20]
+      #     - match: '中華人民共和國'
+      #       in: 'markdown'
+      #       in_range: [0, 20]
+      #     - match: '是中華人民共和國'
+      #       in: 'markdown'
+      #       in_range: [0, 40]
+      #   rows_limit: 10000  # Limit the number of rows to use
+      #   # Optional, for test split
+      #   # test_size: 0.1
+      #   # test_split_seed: 42
+      #   # test_rows_limit: 10  # Only works if test_size is set
+
+      # Settings for `build_with` `sharegpt`.
+      sharegpt_settings:
+        source_dataset: 'zetavg/ShareGPT-Processed'
+        # The alpaca template to use. Supported values: `null` (default), `short`.
+        train_on_inputs: false
+        languages:
+          - en: 0.4  # Limit the number of rows to use, int (> 1) means excect number while float (0 < n < 1) means percentage, float can only be used if rows_limit and test_rows_limit is used.
+          - zh_Hant  # No limit
+        rows_limit: 8000  # Limit the total number of rows to use
+        # Optional, for test split
+        test_size: 0.02
+        test_split_seed: 42
+        test_rows_limit: 100  # Only works if test_size is set
+
     only_train_parameters_matching:
       - 'embed'
 
+    # Training arguments.
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
     training_arguments:
       # Train hyperparams
       num_train_epochs: 1
-      # per_device_train_batch_size: 4
+      # per_device_train_batch_size: 2
       auto_find_batch_size: true
       gradient_accumulation_steps: 1
-      optim: 'adamw_torch'
+      optim: adamw_torch
       learning_rate: 0.00005 # 5e-5
       lr_scheduler_type: constant
       warmup_steps: 100
       # Steps & save
       logging_steps: 10
+      eval_steps: 500
       save_steps: 2000
       save_total_limit: 5
 
-  all_params:
-    # This will not be used if run_name is specified.
-    run_suffix: 'gcp-a100-trans-t3'
+  b_1_embeddings_and_attention:
+    inheritance_from: a_1_embeddings
+    only_train_parameters_matching:
+      - 'embed'
+      - 'attention'
 
+  c_1_all_params:
+    inheritance_from: a_1_embeddings
+    only_train_parameters_matching: null
+
+  a_2_lora_instruction_tune:
+    run_name_suffix: 'a100-t004'
+    max_tokens_length: 2048
+
+    # Train on top of a model output from another training.
     base_on:
-      output_of: embeddings
+      # Start the training base on the output of the 'only_embeddings' training.
+      output_of: a_1_embeddings
 
-    # Name of the run. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
-    # run_name: ''
+    # To train with PEFT (Parameter-Efficient Fine-Tuning), specify a method.
+    use_peft: lora
 
-    # Name of the output model. If not specified, it will be generated from the
-    # project name, group name, run name, and the parameter used.
-    # model_name: ''
-
-    max_training_text_length: 2048
-
-    # Name of the dataset. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
-    dataset_name: 'zh-tw-pythia-a12k-trans'
-
+    dataset_name: 'zh-tw-pythia-ta8000-v1-it1-sg-001'
     dataset:
-      build_with: translations
-      preview_length: 64
-      translations_settings:
-        source_dataset: 'zetavg/coct-en-zh-tw-translations-twp-300k'
-        lang_1_key: 'en'
-        lang_2_key: 'ch'
-        templates:
-          - "English: {lang_1}\nChinese: {lang_2}"
-          - "Chinese: {lang_2}\nEnglish: {lang_1}"
-        # rows_limit: 100
+      build_with:
+        - sharegpt
 
-    # Only train parameters which with name matches with one of the listed
-    # regexp. If not specified, all parameters will be trained.
-    # only_train_parameters_matching:
-    #   - 'embed'
+      # A 'preview' column will be added to the dataset as non-encoded text
+      # for the convenience to check what is contatined in a row of the dataset.
+      # This controls the maximum length of the preview.
+      preview_length: 512
 
+      # Settings for `build_with` `sharegpt`.
+      sharegpt_settings:
+        source_dataset: 'zetavg/ShareGPT-Processed'
+        # The alpaca template to use. Supported values: `null` (default), `short`.
+        train_on_inputs: false
+        languages:
+          - en: 0.3  # Limit the number of rows to use, int (> 1) means excect number while float (0 < n < 1) means percentage, float can only be used if rows_limit and test_rows_limit is used.
+          - zh: 0.2
+          - zh_Hant  # No limit
+        rows_limit: 10000  # Limit the total number of rows to use
+        # Optional, for test split
+        test_size: 0.01
+        test_split_seed: 42
+        test_rows_limit: 100  # Only works if test_size is set
+
+    # Training arguments.
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
     training_arguments:
       # Train hyperparams
       num_train_epochs: 1
-      per_device_train_batch_size: 4
+      # per_device_train_batch_size: 2
+      auto_find_batch_size: true
       gradient_accumulation_steps: 1
-      optim: 'adamw_torch'
+      optim: adamw_torch
       learning_rate: 0.00005 # 5e-5
       lr_scheduler_type: constant
       warmup_steps: 100
       # Steps & save
       logging_steps: 10
-      save_steps: 5000
-      save_total_limit: 8
+      eval_steps: 100
+      save_steps: 2000
+      save_total_limit: 5
 
+    # LoRA config for `use_peft: lora`.
+    # See: https://huggingface.co/docs/peft/main/en/package_reference/tuners#peft.LoraConfig
+    lora_config:
+      task_type: CAUSAL_LM
+      r: 32
+      lora_alpha: 64
+      lora_dropout: 0.05
+      target_modules:
+        - 'embed'
+        - 'input'
+        # - 'attention'
+        # - 'rotary_emb'
+        - 'query_key_value'
+        - 'dense'
+        # - 'act'
 
-  all_params_from_start:
-    # This will not be used if run_name is specified.
-    run_suffix: 'gcp-a100-trans-t2'
+  b_2_lora_instruction_tune:
+    inheritance_from: a_2_lora_instruction_tune
+    base_on:
+      output_of: b_1_embeddings_and_attention
 
-    # base_on:
-    #   output_of: embeddings
-
-    # Name of the run. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
-    # run_name: ''
-
-    # Name of the output model. If not specified, it will be generated from the
-    # project name, group name, run name, and the parameter used.
-    # model_name: ''
-
-    max_training_text_length: 2048
-
-    # Name of the dataset. If not specified, it will be generated from the
-    # project name, group name, and the parameter used.
-    dataset_name: 'zh-tw-pythia-a12k-trans'
-
-    dataset:
-      build_with: translations
-      preview_length: 64
-      translations_settings:
-        source_dataset: 'zetavg/coct-en-zh-tw-translations-twp-300k'
-        lang_1_key: 'en'
-        lang_2_key: 'ch'
-        templates:
-          - "English: {lang_1}\nChinese: {lang_2}"
-          - "Chinese: {lang_2}\nEnglish: {lang_1}"
-        # rows_limit: 100
-
-    # Only train parameters which with name matches with one of the listed
-    # regexp. If not specified, all parameters will be trained.
-    # only_train_parameters_matching:
-    #   - 'embed'
-
-    # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
-    training_arguments:
-      # Train hyperparams
-      num_train_epochs: 1
-      per_device_train_batch_size: 4
-      gradient_accumulation_steps: 1
-      optim: 'adamw_torch'
-      learning_rate: 0.00005 # 5e-5
-      lr_scheduler_type: constant
-      warmup_steps: 100
-      # Steps & save
-      logging_steps: 10
-      save_steps: 5000
-      save_total_limit: 8
+  c_2_lora_instruction_tune:
+    inheritance_from: a_2_lora_instruction_tune
+    base_on:
+      output_of: c_1_all_params
 
 # Hugging Face options.
 # This is necessary for training in the cloud since we rely on the
-# Hugging Face Hug to store the intermediate tokenizer and dataset for servers
+# Hugging Face Hub to store the intermediate tokenizer and dataset for servers
 # in the cloud to download them from.
 push_outputs_to_hf: true
 
-# WandB
+# Weights & Biases settings.
 report_to_wandb: true
 wandb_project: zh-tw-llm
-# wandb_group: pythia
+wandb_group: ta01
