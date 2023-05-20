@@ -164,7 +164,7 @@ tokenizer:
 
 training:
   a_1_embeddings:
-    run_name_suffix: 'h100-t0003'
+    run_name_suffix: 'h100-t015'
 
     # Name of the run. If not specified, one will be automatically
     # generated from the parameters used, and append with the 'run_name_suffix'.
@@ -274,7 +274,7 @@ training:
       # Steps & save
       logging_steps: 10
       eval_steps: 500
-      save_steps: 10000
+      save_steps: 5000
       save_total_limit: 5
 
   b_1_embeddings_and_att:
