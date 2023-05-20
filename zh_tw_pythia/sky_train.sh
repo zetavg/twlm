@@ -4,6 +4,7 @@
 # Initialize default values
 cfg="default"
 cluster_name="zh-tw-model-trainer"
+script_name="train.py"
 skip_setup="false"
 
 # Usage function
@@ -38,6 +39,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     -c=*|--cfg=*)
       cfg="${1#*=}"
+      shift # past argument
+      ;;
+    -r|--script_name)
+      script_name="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -r=*|--script_name=*)
+      script_name="${1#*=}"
       shift # past argument
       ;;
     -n|--cluster_name)
@@ -98,6 +108,7 @@ echo ""
 
 if [ "$skip_setup" == "true" ]; then
   sky exec "$cluster_name" sky_training.yaml \
+    --env SCRIPT_NAME="$script_name" \
     --env WANDB_API_KEY="$(awk -v machine="api.wandb.ai" 'BEGIN {RS="\n"; FS="\n"} $1 == "machine " machine {getline; while ($0 != "" && $0 !~ /^machine/) {if ($0 ~ /^ *password/) {sub(/^ *password */, "", $0); print $0; exit}; getline}}' ~/.netrc)" \
     --env HUGGING_FACE_HUB_TOKEN="$(cat ~/.cache/huggingface/token | tr -d '\n')" \
     --env CFG="$cfg" \
@@ -106,6 +117,7 @@ if [ "$skip_setup" == "true" ]; then
 else
   sleep 8
   sky launch sky_training.yaml \
+    --env SCRIPT_NAME="$script_name" \
     --env WANDB_API_KEY="$(awk -v machine="api.wandb.ai" 'BEGIN {RS="\n"; FS="\n"} $1 == "machine " machine {getline; while ($0 != "" && $0 !~ /^machine/) {if ($0 ~ /^ *password/) {sub(/^ *password */, "", $0); print $0; exit}; getline}}' ~/.netrc)" \
     --env HUGGING_FACE_HUB_TOKEN="$(cat ~/.cache/huggingface/token | tr -d '\n')" \
     --env CFG="$cfg" \

@@ -29,6 +29,7 @@ from utils.config import Config
 from utils.paths import Paths, project_dir
 from utils.get_training_config_values import get_training_config_values
 from utils.load import load_tokenizer, load_dataset
+from utils.get_torch_dtype_from_str import get_torch_dtype_from_str
 from utils.formatting import (
     better_format_pairs_in_json_text,
     comparing_lists,
@@ -62,9 +63,19 @@ def main(
 
     training_config = config.get_training_config(train_name)
 
-    model_name, base_model_name, tokenizer_name, base_on_model_name, dataset_name, peft_type = map(
+    (
+        model_name, torch_dtype,
+        base_model_name, tokenizer_name, base_on_model_name,
+        dataset_name,
+        peft_type
+    ) = map(
         get_training_config_values(config, training_config).get,
-        ('model_name', 'base_model_name', 'tokenizer_name', 'base_on_model_name', 'dataset_name', 'peft_type'))
+        (
+            'model_name', 'torch_dtype',
+            'base_model_name', 'tokenizer_name', 'base_on_model_name',
+            'dataset_name',
+            'peft_type'
+        ))
 
     model_output_path = paths.get_model_path(model_name)
 
@@ -78,7 +89,10 @@ def main(
 
     print(f"Starting train '{training_config.run_name}'...")
     print()
-    print(colored("Base on model:", 'cyan'), base_on_model_name_or_path)
+    print(
+        colored("Base on model:", 'cyan'),
+        base_on_model_name_or_path,
+        f"({torch_dtype})" if torch_dtype else '')
     print(colored("Tokenizer:", 'cyan'), tokenizer_name)
     print()
     if peft_type:
@@ -150,7 +164,9 @@ def main(
 
     print(f"Loading base model '{base_on_model_name_or_path}'...")
     model = AutoModelForCausalLM.from_pretrained(
-        base_on_model_name_or_path, device_map='auto')
+        base_on_model_name_or_path,
+        torch_dtype=get_torch_dtype_from_str(torch_dtype),
+        device_map='auto')
     print(
         f"Base model loaded, input_embeddings: {model.get_input_embeddings()}, output_embeddings: {model.get_output_embeddings()}.")
     print()
@@ -362,7 +378,7 @@ def main(
             """).strip()
         model_card_content += '\n\n'
         model_card_content += dedent(f"""
-        * Base model: `{base_on_model_name_or_path}`
+        * Based on: `{base_on_model_name}`
         * Tokenizer: `{tokenizer_name}`
         * Vocab size: `{tokenizer.vocab_size}`
         * Train: `{training_config.config_name}`

@@ -4,6 +4,10 @@
 
 # To build the tokenizer with this config, run: `python build_tokenizer.py --cfg=sample`.
 
+# Hugging Face user or organization name.
+# This is used to save and load models and datasets from Hugging Face Hub.
+hf_user_or_org_name: 'zh-tw-llm-dv-dv'
+
 # Project and group name, used for logging and generating names for the outputs
 # (when output names are not specified).
 project_name: 'zh-tw-llm-dev'
@@ -13,15 +17,14 @@ group_name: 'sample'
 base_tokenizer_name: 'EleutherAI/pythia-70m'
 base_model_name: 'EleutherAI/pythia-70m'
 
+# Specify the torch_dtype for the model.
+# torch_dtype: float16
+
 # Name of the builded tokenizer. If not specified, a name will be
 # automatically generated based on the parameters used.
 # This will also be use to load the tokenizer while preparing the
 # dataset and training the model.
 # tokenizer_name: ''
-
-# Hugging Face user or organization name.
-# This is used to save and load models and datasets from Hugging Face Hub.
-hf_user_or_org_name: 'zh-tw-llm-dv-dv'
 
 # Configuration for building the tokenizer.
 tokenizer:
@@ -170,7 +173,7 @@ training:
     # A suffix to append to the run name. This is useful for distinguishing
     # like different hardware setups or hyperparameters used.
     # Note that this will not be used if 'run_name' is explicitly specified.
-    run_name_suffix: 'dev-05'
+    run_name_suffix: 'dev-002'
 
     # Name of the run. If not specified, one will be automatically
     # generated from the parameters used, and append with the 'run_name_suffix'.
@@ -199,6 +202,10 @@ training:
         - wikipedia
         - sharegpt
         - alpaca
+
+      # Useful for testing if the dataset will OOM.
+      # sort_by: length-desc
+      # only_first_n_rows: 100
 
       # A 'preview' column will be added to the dataset as non-encoded text
       # for the convenience to check what is contatined in a row of the dataset.
@@ -278,6 +285,7 @@ training:
     # Training arguments.
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
     training_arguments:
+      # fp16: true
       # Train hyperparams
       num_train_epochs: 1
       per_device_train_batch_size: 2
@@ -330,6 +338,7 @@ training:
     # Training arguments.
     # See: https://huggingface.co/docs/transformers/main/en/main_classes/trainer#transformers.TrainingArguments
     training_arguments:
+      # fp16: true
       # Train hyperparams
       num_train_epochs: 1
       per_device_train_batch_size: 2

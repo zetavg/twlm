@@ -7,14 +7,14 @@ def longest_common_substring(s1, s2):
     return s1[match.a: match.a + match.size]
 
 
-def remove_longest_common_substring(s1, s2, min_length=3):
+def remove_longest_common_substring(s1, s2, min_length=4):
     lcs = longest_common_substring(s1, s2)
     if len(lcs) < min_length:
         return s1
     return s1.replace(lcs, '', 1)
 
 
-def remove_common_substring(s1, s2, min_length=3, passes=5):
+def remove_common_substring(s1, s2, min_length=4, passes=5):
     for _ in range(passes):
         s1 = remove_longest_common_substring(s1, s2, min_length)
     return s1

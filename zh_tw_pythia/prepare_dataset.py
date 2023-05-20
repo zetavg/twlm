@@ -116,7 +116,16 @@ def prepare_dataset(
     print(f"Concatenated dataset contains {len(dataset)} rows.")
 
     dataset = dataset.filter(lambda x: x['input_ids'])
-    dataset = dataset.shuffle()
+
+    sort_by = dataset_config.sort_by
+    if sort_by:
+        column, order = sort_by
+        print(f"Sort by '{column}' {order}...")
+        dataset = dataset.sort(column, reverse=order == 'desc')
+    else:
+        dataset = dataset.shuffle()
+    if dataset_config._config.get('only_first_n_rows'):
+        dataset = dataset.select(range(dataset_config._config['only_first_n_rows']))
     print(colored(
         f"Final dataset contains {len(dataset)} rows.",
         attrs=['bold']
@@ -198,6 +207,7 @@ def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
             # is batched
             batch_encoding['labels'] = []
             batch_encoding['preview'] = []
+            batch_encoding['length'] = []
             for i, source_text in enumerate(data_point[dataset_column]):
                 batch_encoding['labels'].append(
                     batch_encoding['input_ids'][i].copy())
@@ -205,6 +215,7 @@ def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
                 if len(preview_text) > preview_length:
                     preview_text = preview_text[:preview_length] + ' [...]'
                 batch_encoding['preview'].append(preview_text)
+                batch_encoding['length'].append(len(batch_encoding['input_ids'][i]))
         else:
             # not batched
             batch_encoding["labels"] = batch_encoding["input_ids"].copy()
@@ -212,6 +223,7 @@ def get_tokenize_data_fn(tokenizer, dataset_column, max_length, preview_length):
             if len(preview_text) > preview_length:
                 preview_text = preview_text[:preview_length] + ' [...]'
             batch_encoding["preview"] = preview_text
+            batch_encoding['length'] = len(batch_encoding["input_ids"])
         return batch_encoding
     return tokenize_data
 
@@ -223,6 +235,7 @@ def generate_translations_dataset(tokenizer, dataset_config, settings, source_ds
     assert lang_2_key, f"{dataset_config.get_config_level_str(['translations_settings', 'lang_2_key'])} is missing in config {dataset_config.config_file_path}."
     templates = settings.get('templates')
     assert templates, f"{dataset_config.get_config_level_str(['translations_settings', 'templates'])} is missing in config {dataset_config.config_file_path}."
+    use_template = settings.get('use_template')
 
     print('Processing translations dataset...')
 
@@ -233,13 +246,23 @@ def generate_translations_dataset(tokenizer, dataset_config, settings, source_ds
         print(f"Limiting to {rows_limit} rows.")
         source_ds = source_ds.select(range(rows_limit))
 
+    t_i = 0
     def get_translations_text(batch):
+        nonlocal t_i
         output = {'text': []}
 
         for lang_1_text, lang_2_text in zip(
                 batch[lang_1_key], batch[lang_2_key]):
 
-            for template in templates:
+            ts = templates
+            if use_template == 'random':
+                # Not actually random, we need a same output for different runs.
+                if t_i >= len(templates):
+                    t_i = 0
+                ts = [templates[t_i]]
+                t_i += 1
+
+            for template in ts:
                 text = template.format(
                     lang_1=lang_1_text,
                     lang_2=lang_2_text,
@@ -375,7 +398,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
         progress_bar = tqdm(total=rows_limit)
         rows_yield = 0
         i = 0
-        while rows_yield < rows_limit and i <= len(source_ds):
+        while rows_yield < rows_limit and i < len(source_ds):
             d = source_ds[i]
             if languages:
                 if d['lang'] not in languages:
@@ -446,8 +469,13 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
         ending_result = tokenize('### Human:\n')
 
         last_is_input = False
+        messages_count = 0
         for c in data_point['conversations']:
             message = c['opencc_converted_markdown'] or c['markdown']
+            message = message.strip()
+            message = message.strip('\u200b')
+            if not message:
+                continue
             result = tokenize_message(message, c['from'])
             if not result:
                 continue
@@ -463,6 +491,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
             output['input_ids'] += result['input_ids']
             output['attention_mask'] += result['attention_mask']
             output['labels'] += result['labels']
+            messages_count += 1
 
         if not last_is_input:
             output['input_ids'] += ending_result['input_ids']
@@ -480,6 +509,8 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
         if len(preview_text) > preview_length:
             preview_text = preview_text[:preview_length] + ' [...]'
         output["preview"] = preview_text
+        output['length'] = len(output['input_ids'])
+        output['messages_count'] = messages_count
 
         return output
 
@@ -487,6 +518,8 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
         tokenize_data,
         remove_columns=list(source_ds.features.keys())
     )
+
+    ds = ds.filter(lambda x: x['length'] > 8 and x['messages_count'] >= 2)
 
     print(colored(
         f"ShareGPT {type_} dataset ok. Has {len(ds)} rows.",
@@ -605,6 +638,7 @@ def generate_alpaca_dataset(tokenizer, dataset_config, settings, source_ds, rows
         if len(preview_text) > preview_length:
             preview_text = preview_text[:preview_length] + ' [...]'
         result["preview"] = preview_text
+        result['length'] = len(result["input_ids"])
 
         return result
 

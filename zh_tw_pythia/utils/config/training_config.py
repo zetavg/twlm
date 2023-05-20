@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Any, Union, List
 
 import re
 import json
@@ -22,6 +22,22 @@ class TrainingDatasetConfig(ConfigBase):
     @property
     def preview_length(self) -> int:
         return self._get_value('preview_length', int)
+
+    @property
+    def sort_by(self):
+        sort_by_str = self._get_value('sort_by', str, allow_none=True)
+        if sort_by_str:
+            column, order = sort_by_str.split('-')
+            return column, order
+        return None
+
+    @property
+    def test_size(self) -> Union[int, float, None]:
+        return self._get_value('test_size', Union[int, float], allow_none=True)
+
+    @property
+    def train_test_split_seed(self) -> Union[int, None]:
+        return self._get_value('train_test_split_seed', int, allow_none=True)
 
     @property
     def dataset_name(self) -> str:

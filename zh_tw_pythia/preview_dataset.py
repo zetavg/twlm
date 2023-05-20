@@ -75,11 +75,14 @@ def preview_dataset(
     tokenizer = load_tokenizer(config, paths)
 
     dataset = load_dataset(config, paths, dataset_name)
-    dataset = dataset[split].select(range(start, end))
+    dataset = dataset[split]
+    print(f"Rows count: {len(dataset)}")
+    dataset = dataset.select(range(start, end))
+
 
     for i, row in enumerate(dataset):
         preview = row['preview'].replace('\n', '\\n')
-        print(f"Row {i}: '{preview}'")
+        print(f"Row {i}: (l: {row.get('length')}) '{preview}'")
         if only_preview:
             print()
             continue

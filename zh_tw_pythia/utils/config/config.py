@@ -3,6 +3,9 @@ from typing import Union, List
 import os
 import yaml
 
+from ..data_processing import (
+    deep_merge,
+)
 from ..formatting import (
     human_short_number as hs_number,
 )
@@ -60,6 +63,10 @@ class Config(ConfigBase):
         return self._get_value('base_model_name', str)
 
     @property
+    def torch_dtype(self) -> str:
+        return self._get_value('torch_dtype', str, allow_none=True)
+
+    @property
     def tokenizer_name(self) -> str:
         ''' Name of the newly builded tokenizer. '''
         tokenizer_name = self._get_value(
@@ -78,7 +85,8 @@ class Config(ConfigBase):
             lambda: generated_name
         )
         if len(n) > 80:
-            raise ValueError(f"Auto generated tokenizer_name is too long, it must be less than 80 chars. ('{n}')")
+            raise ValueError(
+                f"Auto generated tokenizer_name is too long, it must be less than 80 chars. ('{n}')")
         return n
 
     @property
@@ -97,6 +105,15 @@ class Config(ConfigBase):
             if not training_config:
                 raise ValueError(
                     f"No such training config 'training.{name}' in {self.config_file_path}.")
+
+            if training_config.get('inheritance_from'):
+                inheritance_from = training_config['inheritance_from']
+                if not isinstance(inheritance_from, str):
+                    raise ValueError(
+                        f"inheritance_from must be a string, got '{inheritance_from}' under 'training.{name}' in {self.config_file_path}.")
+                del training_config['inheritance_from']
+                inheritance_from_training_config = self.get_training_config(inheritance_from)._config
+                training_config = deep_merge(inheritance_from_training_config, training_config)
             return TrainingConfig(
                 training_config,
                 config_file_path=self.config_file_path,
