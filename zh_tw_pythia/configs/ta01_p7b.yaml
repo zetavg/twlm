@@ -275,7 +275,7 @@ training:
       logging_steps: 10
       eval_steps: 500
       save_steps: 5000
-      save_total_limit: 5
+      save_total_limit: 10
 
   b_1_embeddings_and_att:
     inheritance_from: a_1_embeddings
@@ -288,7 +288,7 @@ training:
     only_train_parameters_matching: null
 
   a_2_lora_instruction_tune:
-    run_name_suffix: 'a100-t00t1'
+    run_name_suffix: 'h100-t002'
     max_tokens_length: 2048
 
     # Train on top of a model output from another training.
@@ -299,7 +299,7 @@ training:
     # To train with PEFT (Parameter-Efficient Fine-Tuning), specify a method.
     use_peft: lora
 
-    dataset_name: 'zh-tw-pythia-ta8000-v1-it1-sg-001'
+    dataset_name: 'zh-tw-pythia-ta8000-v1-it1-sg-002'
     dataset:
       build_with:
         - sharegpt
@@ -339,16 +339,16 @@ training:
       warmup_steps: 100
       # Steps & save
       logging_steps: 10
-      eval_steps: 100
+      eval_steps: 500
       save_steps: 2000
-      save_total_limit: 5
+      save_total_limit: 10
 
     # LoRA config for `use_peft: lora`.
     # See: https://huggingface.co/docs/peft/main/en/package_reference/tuners#peft.LoraConfig
     lora_config:
       task_type: CAUSAL_LM
-      r: 32
-      lora_alpha: 64
+      r: 64
+      lora_alpha: 128
       lora_dropout: 0.05
       target_modules:
         - 'embed'

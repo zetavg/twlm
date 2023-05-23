@@ -395,6 +395,7 @@ def generate_sharegpt_dataset(tokenizer, dataset_config, settings, source_ds, ro
         for la in languages]
 
     def data_generator():
+        nonlocal lang_counts
         progress_bar = tqdm(total=rows_limit)
         rows_yield = 0
         i = 0
