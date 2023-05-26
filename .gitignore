@@ -1,1 +1,11 @@
-.DS_Store
+# /configs/*
+/data
+/wandb
+/sky_workdir
+__pycache__
+
+/sky_training.yaml
+/sky_prepare.sh
+
+/save_now
+/abort

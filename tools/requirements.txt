@@ -1,9 +1,0 @@
-huggingface_hub
-datasets
-requests
-markdownify==0.11.6
-pangu
-firebase-admin
-google-cloud-firestore
-gradio==3.27.0
-tqdm

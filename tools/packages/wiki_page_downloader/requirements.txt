@@ -1,4 +1,0 @@
-firebase-admin
-google-cloud-firestore
-git+https://github.com/zetavg/python_wikipedia
-tqdm
