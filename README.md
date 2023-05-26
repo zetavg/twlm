@@ -4,9 +4,9 @@ An attempt to re-train EN language models to understand and generate fluent Taiw
 
 ## Trained Models
 
-* [TW-Pythia-6.9B-Chat](twlm/tw-pythia-6.9b-chat-v0_2)
+* [TW-Pythia-6.9B-Chat](https://huggingface.co/twlm/tw-pythia-6.9b-chat-v0_2)
 
-Demo: See https://hackmd.io/@z/twlm-demo
+Demo: see https://hackmd.io/@z/twlm-demo
 
 ## Usage
 
