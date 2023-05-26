@@ -130,6 +130,8 @@ def main(
     merged_model_output_path = paths.get_model_path(merged_model_name)
     print(f"Saving merged model as '{merged_model_output_path}...")
 
+    model.save_pretrained('tmp/merged_model')
+    print('...')
     model.save_pretrained(merged_model_output_path)
     tokenizer.save_pretrained(merged_model_output_path)
     print(colored(

@@ -336,6 +336,8 @@ def main(
 
     print()
     print(f"Saving model to {model_output_path}...")
+    model.save_pretrained('tmp/trained_model')
+    print('...')
     model.save_pretrained(model_output_path)
     tokenizer.save_pretrained(model_output_path)
     if early_abort:

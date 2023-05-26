@@ -368,6 +368,93 @@ training:
     base_on:
       output_of: c_1_all_params
 
+  a2_1_embeddings:
+    run_name_suffix: 'h100-t003'
+    base_on:
+      output_of: a_1_embeddings
+    inheritance_from: a_1_embeddings
+    max_tokens_length: 1024
+    dataset_name: 'zh-tw-pythia-ta8000-v1-e1-tr_wiki_sg-001-c1024'
+    dataset:
+      # How the dataset should be built. Supported values:
+      #  - `translations`: Translations between two languages.
+      #  - `aplaca`: Alpaca-styled examples for instruction tuning.
+      build_with:
+        - translations
+        - wikipedia
+        - sharegpt
+        # - alpaca
+
+      # A 'preview' column will be added to the dataset as non-encoded text
+      # for the convenience to check what is contatined in a row of the dataset.
+      # This controls the maximum length of the preview.
+      preview_length: 128
+
+      # Useful for testing if the dataset will OOM.
+      # sort_by: length-desc
+      # only_first_n_rows: 100
+
+      # Settings for `build_with` `translations`.
+      translations_settings:
+        source_dataset: 'zetavg/coct-en-zh-tw-translations-twp-300k'
+        lang_1_key: 'en'
+        lang_2_key: 'ch'
+        templates:
+          - "English: {lang_1}\nChinese: {lang_2}"
+          - "Chinese: {lang_2}\nEnglish: {lang_1}"
+        use_template: random
+        rows_limit: 200000  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 100
+        test_split_seed: 42
+        # test_rows_limit: 100  # Only works if test_size is set
+
+      # Settings for `build_with` `wikipedia`.
+      wikipedia_settings:
+        source_dataset: 'zetavg/zh-tw-wikipedia'
+        exclude:
+          - content_length_longer_than: 1024
+          - match: '小行星'
+            in: 'markdown'
+            in_range: [0, 40]
+          - match: '，是中國'
+            in: 'markdown'
+            in_range: [0, 20]
+          - match: '中華人民共和國'
+            in: 'markdown'
+            in_range: [0, 20]
+          - match: '是中華人民共和國'
+            in: 'markdown'
+            in_range: [0, 40]
+        rows_limit: 100000  # Limit the number of rows to use
+        # Optional, for test split
+        test_size: 0.1
+        test_split_seed: 42
+        test_rows_limit: 30  # Only works if test_size is set
+
+      # Settings for `build_with` `sharegpt`.
+      sharegpt_settings:
+        source_dataset: 'zetavg/ShareGPT-Processed'
+        # The alpaca template to use. Supported values: `null` (default), `short`.
+        train_on_inputs: false
+        languages:
+          - en: 0.4  # Limit the number of rows to use, int (> 1) means excect number while float (0 < n < 1) means percentage, float can only be used if rows_limit and test_rows_limit is used.
+          - zh_Hant  # No limit
+        rows_limit: 8000  # Limit the total number of rows to use
+        # Optional, for test split
+        test_size: 0.02
+        test_split_seed: 42
+        test_rows_limit: 100  # Only works if test_size is set
+    training_arguments:
+      eval_steps: 250
+
+  a2_2_lora_instruction_tune:
+    run_name_suffix: 'h100-t003'
+    inheritance_from: a_2_lora_instruction_tune
+    base_on:
+      model: 'zh-tw-llm-dv/zh-tw-llm-ta01-pythia-6.9b-ta8000-v1-a2_1_embeddings-h100-t003-e574b6'
+      # output_of: a2_1_embeddings
+
 # Hugging Face options.
 # This is necessary for training in the cloud since we rely on the
 # Hugging Face Hub to store the intermediate tokenizer and dataset for servers

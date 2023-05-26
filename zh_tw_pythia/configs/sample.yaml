@@ -318,6 +318,8 @@ training:
     base_on:
       # Start the training base on the output of the 'only_embeddings' training.
       output_of: only_embeddings
+      # Or specify a model directly
+      # model: 'org/name'
 
     dataset:
       # Use the same dataset as the 'only_embeddings' training.
