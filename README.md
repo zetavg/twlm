@@ -1,6 +1,14 @@
-# Traditional Chinese (Taiwan) Pythia
+# Taiwanese Mandarin LM
 
-An attempt to train a Pythia model to understand and speak fluent Taiwan Traditional Chinese.
+An attempt to re-train EN language models to understand and generate fluent Taiwanese Mandarin (Traditional Chinese).
+
+## Trained Models
+
+* [TW-Pythia-6.9B-Chat](twlm/tw-pythia-6.9b-chat-v0_2)
+
+Demo: See https://hackmd.io/@z/twlm-demo
+
+## Usage
 
 主要有三個步驟：
 
@@ -38,7 +46,7 @@ training:
 以上指令都可以用 `--cfg` 來指定要使用哪一個 config 檔，例如 `python build_tokenizer.py --cfg default` 為使用 `configs/default.yaml`。亦可以用 `--config_file_path` 來指定 config 檔的路徑，例如 `python train.py --config_file_path '~/configs/80k_tokens.yaml`。
 
 
-## 立即存擋以及提前中止
+### 立即存擋以及提前中止
 
 在 `train.py` 執行訓練的過程中，若偵測到專案目錄中存在名為 `save_now` 檔案，將會立即儲存一份 checkpoint。
 
@@ -47,7 +55,7 @@ training:
 舉例來說，我們可以切換到 train.py 所在的目錄下，執行 `touch save_now` 來立即存檔，或執行 `touch abort` 提前中止訓練。
 
 
-## 使用 SkyPilot 在雲端訓練
+### 使用 SkyPilot 在雲端訓練
 
 （需要先安裝以及設定好 SkyPilot，詳見： https://skypilot.readthedocs.io/en/latest/getting-started/installation.html 。）
 
@@ -62,8 +70,13 @@ training:
 除此之外，`./sky_train.sh` 還可以使用 `--cluster_name <name>` 或是 `-n <name>` 來指定要使用的 SkyPilot cluster (等同 `sky launch` 的 `-c`)，以及使用 `--skip_setup` 或 `-s` 來跳過雲端機器的 setup (若使用了 `--skip_setup`，背後將會使用 `sky exec` 而非 `sky launch`)。
 
 
-## 其他工具
+### 其他工具
 
 * 預覽 dataset：`python preview_dataset.py --cfg=... <train_name> --split=test --range_=10,20` (參數基本與 `train.py` 相同，但多了 `--split`、`--range_` 以及 `--only_preview` 三個參數)。
 * 訓練前初步檢查 config 內容：`python train_check_config.py --cfg=... <train_name>`。
 * 比較兩份 config 的差異：`python diff_configs.py config_1 config_2`。
+
+## Related Projects
+
+* [zetavg/LLM-Research](https://github.com/zetavg/LLM-Research)
+* [zetavg/LLaMA-LoRA-Tuner](https://github.com/zetavg/LLaMA-LoRA-Tuner)
